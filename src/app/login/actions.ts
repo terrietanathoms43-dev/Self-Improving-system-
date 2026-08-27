@@ -1,2 +1,14 @@
-"use server";import {redirect} from "next/navigation";import {z} from "zod";import {createClient} from "@/lib/supabase/server";
-export async function login(formData:FormData){const parsed=z.object({email:z.email(),password:z.string().min(10).max(128)}).safeParse(Object.fromEntries(formData));if(!parsed.success)redirect("/login?error=Invalid+credentials");const supabase=await createClient();const {error}=await supabase.auth.signInWithPassword(parsed.data);if(error)redirect("/login?error=Sign-in+failed");redirect("/dashboard")}
+"use server";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+export async function login(formData: FormData) {
+  const parsed = z
+    .object({ email: z.email(), password: z.string().min(10).max(128) })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/login?error=Invalid+credentials");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  if (error) redirect("/login?error=Sign-in+failed");
+  redirect("/dashboard");
+}

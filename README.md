@@ -19,8 +19,8 @@ Production-oriented Next.js application for human-governed medical-assistance as
 2. Copy `.env.example` to `.env.local` and supply the Supabase URL and publishable key.
 3. Link a dedicated Supabase project with the Supabase CLI.
 4. Apply `supabase/migrations/202608270001_initial_schema.sql` using `supabase db push`.
-5. Create staff accounts in Supabase Authentication, insert matching `users` records, and assign roles through `user_roles` using an authorized administrative process.
-6. Insert an initial `model_versions` draft, evaluate and approve it, then activate it through the governance workflow.
+5. Create staff accounts in Supabase Authentication, insert matching `cbg_users` records, and assign roles through `cbg_user_roles` using an authorized administrative process.
+6. Insert an initial `cbg_model_versions` draft, evaluate and approve it, then activate it through the governance workflow.
 7. Run `npm run dev`.
 
 Never expose `SUPABASE_SECRET_KEY` or `OPENAI_API_KEY` to browser code. Only variables prefixed with `NEXT_PUBLIC_` are client-visible. The optional OpenAI key may support administrative drafting or summarization in future, but it is not used to make final decisions or silently modify rules.

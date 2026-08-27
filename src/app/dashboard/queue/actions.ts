@@ -44,33 +44,31 @@ export async function runAssessment(formData: FormData) {
   const { applicationId, ...input } = parsed.data;
   const s = await createClient();
   const { data: version } = await s
-    .from("model_versions")
+    .from("cbg_model_versions")
     .select("id,version")
     .eq("status", "active")
     .single();
   if (!version) throw new Error("No active rules version");
   const result = assessApplication(input, version.version);
-  const { error } = await s
-    .from("ai_assessments")
-    .insert({
-      application_id: applicationId,
-      model_version_id: version.id,
-      score: result.score,
-      category: result.category,
-      confidence: result.confidence,
-      reasons: result.reasons,
-      risk_factors: result.riskFactors,
-      missing_information: result.missingInformation,
-      fairness_warnings: result.fairnessWarnings,
-      recommended_action: result.recommendedAction,
-      review_pathway: result.reviewPathway,
-      requires_human_review: true,
-      input_snapshot: input,
-      created_by: actor.id,
-    });
+  const { error } = await s.from("cbg_ai_assessments").insert({
+    application_id: applicationId,
+    model_version_id: version.id,
+    score: result.score,
+    category: result.category,
+    confidence: result.confidence,
+    reasons: result.reasons,
+    risk_factors: result.riskFactors,
+    missing_information: result.missingInformation,
+    fairness_warnings: result.fairnessWarnings,
+    recommended_action: result.recommendedAction,
+    review_pathway: result.reviewPathway,
+    requires_human_review: true,
+    input_snapshot: input,
+    created_by: actor.id,
+  });
   if (error) throw error;
   await s
-    .from("applications")
+    .from("cbg_applications")
     .update({ status: "human_review", updated_by: actor.id })
     .eq("id", applicationId);
   revalidatePath("/dashboard/queue");
@@ -111,7 +109,7 @@ export async function submitHumanReview(formData: FormData) {
   const parsed = reviewSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) throw new Error("Review is incomplete or invalid");
   const s = await createClient();
-  const { error } = await s.rpc("submit_human_review", {
+  const { error } = await s.rpc("cbg_submit_human_review", {
     p_application_id: parsed.data.applicationId,
     p_assessment_id: parsed.data.assessmentId,
     p_disposition: parsed.data.disposition,
@@ -122,7 +120,11 @@ export async function submitHumanReview(formData: FormData) {
     p_explanation: parsed.data.explanation,
     p_correction_category: parsed.data.correctionCategory,
     p_reviewer_role: actor.roles.find((role) =>
-      ["case_review_committee", "human_oversight_committee", "appeals_reviewer"].includes(role),
+      [
+        "case_review_committee",
+        "human_oversight_committee",
+        "appeals_reviewer",
+      ].includes(role),
     ),
   });
   if (error) throw error;

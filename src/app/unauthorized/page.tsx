@@ -1,1 +1,22 @@
-import Link from "next/link";export default function Unauthorized(){return <main id="main" className="grid min-h-screen place-items-center p-6 text-center"><div><h1 className="text-3xl font-bold">Access restricted</h1><p className="mt-2 text-slate-600">Your assigned role does not permit access to this area.</p><Link className="mt-6 inline-block text-teal-700 underline" href="/dashboard">Return to dashboard</Link></div></main>}
+import Link from "next/link";
+export default function Unauthorized() {
+  return (
+    <main
+      id="main"
+      className="grid min-h-screen place-items-center p-6 text-center"
+    >
+      <div>
+        <h1 className="text-3xl font-bold">Access restricted</h1>
+        <p className="mt-2 text-slate-600">
+          Your assigned role does not permit access to this area.
+        </p>
+        <Link
+          className="mt-6 inline-block text-teal-700 underline"
+          href="/dashboard"
+        >
+          Return to dashboard
+        </Link>
+      </div>
+    </main>
+  );
+}

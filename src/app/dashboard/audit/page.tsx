@@ -1,2 +1,54 @@
-import {requireActor} from "@/lib/auth";import {createClient} from "@/lib/supabase/server";import {Card} from "@/components/ui";import {formatDate} from "@/lib/utils";
-export default async function Audit(){await requireActor(['human_oversight_committee','admin']);const s=await createClient();const {data}=await s.from('audit_logs').select('id,actor_id,actor_role,action,entity_type,entity_id,occurred_at').order('occurred_at',{ascending:false}).limit(200);return <><h1 className="text-3xl font-bold">Complete audit log</h1><p className="mt-2 text-slate-600">Append-only history of sensitive access, changes, exports, overrides, and approvals.</p><Card className="mt-6 overflow-x-auto p-0"><table className="w-full text-left text-sm"><thead><tr>{['Time','Actor','Role','Action','Entity'].map(h=><th key={h} className="px-4 py-3">{h}</th>)}</tr></thead><tbody>{(data??[]).map(a=><tr key={a.id} className="border-t"><td className="whitespace-nowrap px-4 py-3">{formatDate(a.occurred_at)}</td><td className="px-4 py-3 font-mono text-xs">{a.actor_id??'system'}</td><td className="px-4 py-3">{a.actor_role?.replaceAll('_',' ')??'system'}</td><td className="px-4 py-3 font-semibold">{a.action}</td><td className="px-4 py-3">{a.entity_type} {a.entity_id}</td></tr>)}</tbody></table></Card></>}
+import { requireActor } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { Card } from "@/components/ui";
+import { formatDate } from "@/lib/utils";
+export default async function Audit() {
+  await requireActor(["human_oversight_committee", "admin"]);
+  const s = await createClient();
+  const { data } = await s
+    .from("cbg_audit_logs")
+    .select("id,actor_id,actor_role,action,entity_type,entity_id,occurred_at")
+    .order("occurred_at", { ascending: false })
+    .limit(200);
+  return (
+    <>
+      <h1 className="text-3xl font-bold">Complete audit log</h1>
+      <p className="mt-2 text-slate-600">
+        Append-only history of sensitive access, changes, exports, overrides,
+        and approvals.
+      </p>
+      <Card className="mt-6 overflow-x-auto p-0">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr>
+              {["Time", "Actor", "Role", "Action", "Entity"].map((h) => (
+                <th key={h} className="px-4 py-3">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(data ?? []).map((a) => (
+              <tr key={a.id} className="border-t">
+                <td className="whitespace-nowrap px-4 py-3">
+                  {formatDate(a.occurred_at)}
+                </td>
+                <td className="px-4 py-3 font-mono text-xs">
+                  {a.actor_id ?? "system"}
+                </td>
+                <td className="px-4 py-3">
+                  {a.actor_role?.replaceAll("_", " ") ?? "system"}
+                </td>
+                <td className="px-4 py-3 font-semibold">{a.action}</td>
+                <td className="px-4 py-3">
+                  {a.entity_type} {a.entity_id}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </>
+  );
+}
