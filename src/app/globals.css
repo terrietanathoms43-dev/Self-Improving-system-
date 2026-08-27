@@ -1,0 +1,2 @@
+@import "tailwindcss";
+:root{color-scheme:light;--background:#f8fafc;--foreground:#0f172a}*{box-sizing:border-box}body{margin:0;background:var(--background);color:var(--foreground);font-family:"Geist","Geist Fallback",ui-sans-serif,system-ui,sans-serif}button,a,input,select,textarea{outline-offset:2px}.skip-link{position:absolute;left:-9999px}.skip-link:focus{left:1rem;top:1rem;z-index:100;background:white;padding:.75rem}
