@@ -11,6 +11,7 @@ import {
   Stethoscope,
   Gavel,
   Files,
+  Users,
 } from "lucide-react";
 import type { Role } from "@/types/database";
 const links = [
@@ -21,6 +22,7 @@ const links = [
   ["/dashboard/reviews", "Decision comparison", GitCompare],
   ["/dashboard/appeals", "Appeals", Gavel],
   ["/dashboard/documents", "Secure documents", Files],
+  ["/dashboard/admin", "Staff administration", Users],
   ["/dashboard/fairness", "Fairness monitoring", Scale],
   ["/dashboard/governance", "Rules & governance", GitBranch],
   ["/dashboard/audit", "Audit log", ScrollText],

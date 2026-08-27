@@ -1,5 +1,6 @@
 import { login } from "./actions";
 import { Button, Card, Input } from "@/components/ui";
+import Link from "next/link";
 export default async function Login({
   searchParams,
 }: {
@@ -52,6 +53,7 @@ export default async function Login({
           <Button className="w-full" type="submit">
             Sign in
           </Button>
+          <Link href="/forgot-password" className="block text-center text-sm font-medium text-teal-700">Forgot password?</Link>
         </form>
       </Card>
     </main>

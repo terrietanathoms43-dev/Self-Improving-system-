@@ -28,9 +28,11 @@ Never expose `SUPABASE_SECRET_KEY` or `OPENAI_API_KEY` to browser code. Only var
 ## Vercel deployment
 
 1. Import the GitHub repository into Vercel.
-2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SALT`, `NEXT_PUBLIC_APP_URL`, and optionally `OPENAI_API_KEY` in Project Settings → Environment Variables.
+2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SALT`, `CRON_SECRET`, `NEXT_PUBLIC_APP_URL`, and optionally `OPENAI_API_KEY` in Project Settings → Environment Variables.
 3. Set `NEXT_PUBLIC_APP_URL` to the production Vercel domain and add that domain to Supabase Auth URL Configuration.
 4. Deploy. Vercel runs `next build`; GitHub Actions separately runs lint, TypeScript, unit tests, build, and dependency audit.
+
+For scheduled overdue-case notifications, call `GET /api/maintenance` with `Authorization: Bearer <CRON_SECRET>` from a trusted scheduler. The route returns counts only and never applicant data.
 
 ## Verification
 

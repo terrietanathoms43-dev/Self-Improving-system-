@@ -1,0 +1,2 @@
+"use server";import { redirect } from "next/navigation";import { z } from "zod";import { createClient } from "@/lib/supabase/server";
+export async function requestReset(fd:FormData){const p=z.object({email:z.email()}).safeParse(Object.fromEntries(fd));if(p.success){const s=await createClient();const origin=process.env.NEXT_PUBLIC_APP_URL;if(origin)await s.auth.resetPasswordForEmail(p.data.email,{redirectTo:`${origin}/auth/callback?next=/reset-password`});}redirect("/forgot-password?sent=1")}
