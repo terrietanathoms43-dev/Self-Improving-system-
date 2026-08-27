@@ -7,12 +7,20 @@ import {
   GitBranch,
   ScrollText,
   LogOut,
+  UserPlus,
+  Stethoscope,
+  Gavel,
+  Files,
 } from "lucide-react";
 import type { Role } from "@/types/database";
 const links = [
   ["/dashboard", "Overview", LayoutDashboard],
+  ["/dashboard/intake", "Application intake", UserPlus],
+  ["/dashboard/verification", "Verification", Stethoscope],
   ["/dashboard/queue", "Assessment queue", ClipboardList],
   ["/dashboard/reviews", "Decision comparison", GitCompare],
+  ["/dashboard/appeals", "Appeals", Gavel],
+  ["/dashboard/documents", "Secure documents", Files],
   ["/dashboard/fairness", "Fairness monitoring", Scale],
   ["/dashboard/governance", "Rules & governance", GitBranch],
   ["/dashboard/audit", "Audit log", ScrollText],

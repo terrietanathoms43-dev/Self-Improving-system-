@@ -1,10 +1,11 @@
 import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, Textarea } from "@/components/ui";
+import { activateVersion, createProposal, decideProposal, refreshPatterns, rollbackVersion } from "./actions";
 export default async function Governance() {
   await requireActor(["human_oversight_committee", "admin"]);
   const s = await createClient();
-  const [{ data: proposals }, { data: versions }, { data: evaluations }] =
+  const [{ data: proposals }, { data: versions }, { data: evaluations }, {data: patterns}] =
     await Promise.all([
       s
         .from("cbg_policy_proposals")
@@ -18,6 +19,7 @@ export default async function Governance() {
         .from("cbg_model_evaluations")
         .select("*,cbg_model_versions(version)")
         .order("created_at", { ascending: false }),
+      s.from("cbg_correction_patterns").select("*").order("last_seen_at",{ascending:false}),
     ]);
   return (
     <>
@@ -71,6 +73,11 @@ export default async function Governance() {
           </div>
         </Card>
       </div>
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <Card><div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Correction-pattern detection</h2><form action={refreshPatterns}><Button>Refresh verified patterns</Button></form></div><div className="mt-4 space-y-2">{(patterns??[]).map(p=><p key={p.id} className="rounded-lg bg-slate-50 p-3 text-sm"><strong>{p.correction_category.replaceAll("_"," ")}</strong> · {p.occurrence_count} cases</p>)}</div></Card>
+        <Card><h2 className="font-semibold">Create policy proposal</h2><form action={createProposal} className="mt-4 grid gap-3"><Select name="patternId"><option value="">No linked pattern</option>{(patterns??[]).map(p=><option key={p.id} value={p.id}>{p.correction_category}</option>)}</Select><Input name="title" placeholder="Proposal title" required/><Textarea name="problem" placeholder="Problem statement" minLength={20} required/><Textarea name="change" placeholder="Proposed rules change" minLength={20} required/><Textarea name="evidence" placeholder="Evidence considered" minLength={20} required/><Button>Submit for committee review</Button></form></Card>
+      </div>
+      <Card className="mt-6"><h2 className="font-semibold">Manual committee decisions</h2><div className="mt-4 space-y-4">{(proposals??[]).filter(p=>p.status==="committee_review").map(p=><form key={p.id} action={decideProposal} className="rounded-lg border p-4"><input type="hidden" name="proposalId" value={p.id}/><p className="font-semibold">{p.title}</p><div className="mt-3 grid gap-3 md:grid-cols-2"><Select name="decision"><option value="approved">Approve proposal</option><option value="rejected">Reject proposal</option></Select><label className="flex items-center gap-2 text-sm"><input name="conflict" type="checkbox"/>I have a conflict of interest</label><Textarea name="reason" className="md:col-span-2" placeholder="Committee reason" minLength={20} required/><Button className="md:col-span-2">Record committee decision</Button></div></form>)}</div></Card>
       <Card className="mt-6">
         <h2 className="font-semibold">Evaluation and regression results</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -100,6 +107,7 @@ export default async function Governance() {
           ))}
         </div>
       </Card>
+      <div className="mt-6 grid gap-6 xl:grid-cols-2"><Card><h2 className="font-semibold">Activate evaluated version</h2><form action={activateVersion} className="mt-4 grid gap-3"><Select name="versionId" required><option value="">Draft/approved version</option>{(versions??[]).filter(v=>v.status!=="active").map(v=><option key={v.id} value={v.id}>{v.version}</option>)}</Select><Select name="evaluationId" required><option value="">Passed evaluation</option>{(evaluations??[]).filter(e=>e.status==="passed").map(e=><option key={e.id} value={e.id}>{e.dataset_name} · {e.dataset_version}</option>)}</Select><Textarea name="reason" placeholder="Approval reason" minLength={20} required/><Textarea name="evidence" placeholder="Evidence considered" minLength={20} required/><label className="flex gap-2 text-sm"><input name="conflict" type="checkbox"/>I have a conflict of interest</label><Button>Approve and activate manually</Button></form></Card><Card><h2 className="font-semibold">Controlled rollback</h2><form action={rollbackVersion} className="mt-4 grid gap-3"><Select name="currentId" required><option value="">Current active version</option>{(versions??[]).filter(v=>v.status==="active").map(v=><option key={v.id} value={v.id}>{v.version}</option>)}</Select><Select name="targetId" required><option value="">Previous eligible version</option>{(versions??[]).filter(v=>["retired","approved"].includes(v.status)).map(v=><option key={v.id} value={v.id}>{v.version}</option>)}</Select><Textarea name="reason" placeholder="Rollback reason and evidence" minLength={20} required/><Button>Perform audited rollback</Button></form></Card></div>
     </>
   );
 }
