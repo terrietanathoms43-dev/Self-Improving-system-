@@ -1,0 +1,3 @@
+import {test,expect} from "@playwright/test";
+const email=process.env.E2E_STAFF_EMAIL;const password=process.env.E2E_STAFF_PASSWORD;
+test("authorized staff can sign in and reach the dashboard",async({page})=>{test.skip(!email||!password,"Set E2E_STAFF_EMAIL and E2E_STAFF_PASSWORD for staging");await page.goto("/login");await page.getByLabel("Email").fill(email!);await page.getByLabel("Password").fill(password!);await page.getByRole("button",{name:"Sign in"}).click();await expect(page).toHaveURL(/\/dashboard/);await expect(page.getByRole("heading",{name:/AI review and governance/i})).toBeVisible();await expect(page.getByText(/AI-only rejection blocked/i)).toBeVisible()});

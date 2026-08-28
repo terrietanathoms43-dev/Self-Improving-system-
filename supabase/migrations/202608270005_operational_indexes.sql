@@ -1,0 +1,18 @@
+begin;
+create index if not exists cbg_applications_assigned_idx on public.cbg_applications(assigned_to) where assigned_to is not null;
+create index if not exists cbg_ai_model_idx on public.cbg_ai_assessments(model_version_id);
+create index if not exists cbg_ai_creator_idx on public.cbg_ai_assessments(created_by);
+create index if not exists cbg_reviews_assessment_idx on public.cbg_human_reviews(ai_assessment_id);
+create index if not exists cbg_reviews_reviewer_idx on public.cbg_human_reviews(reviewer_id,reviewed_at desc);
+create index if not exists cbg_appeals_application_idx on public.cbg_appeals(application_id,submitted_at desc);
+create index if not exists cbg_appeals_assignee_idx on public.cbg_appeals(assigned_to) where assigned_to is not null;
+create index if not exists cbg_corrections_application_idx on public.cbg_human_corrections(application_id,created_at desc);
+create index if not exists cbg_eval_model_idx on public.cbg_model_evaluations(model_version_id,created_at desc);
+create index if not exists cbg_eval_baseline_idx on public.cbg_model_evaluations(baseline_version_id);
+create index if not exists cbg_eval_results_evaluation_idx on public.cbg_evaluation_results(evaluation_id);
+create index if not exists cbg_approvals_version_idx on public.cbg_deployment_approvals(model_version_id,approved_at desc);
+create index if not exists cbg_approvals_evaluation_idx on public.cbg_deployment_approvals(evaluation_id);
+create index if not exists cbg_documents_uploader_idx on public.cbg_documents(uploaded_by,created_at desc);
+create index if not exists cbg_alerts_metric_idx on public.cbg_fairness_alerts(metric_id) where metric_id is not null;
+create index if not exists cbg_metrics_version_idx on public.cbg_fairness_metrics(model_version_id) where model_version_id is not null;
+commit;

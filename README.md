@@ -33,10 +33,12 @@ Never expose `SUPABASE_SECRET_KEY` or `OPENAI_API_KEY` to browser code. Only var
 4. Deploy. Vercel runs `next build`; GitHub Actions separately runs lint, TypeScript, unit tests, build, and dependency audit.
 
 For scheduled overdue-case notifications, call `GET /api/maintenance` with `Authorization: Bearer <CRON_SECRET>` from a trusted scheduler. The route returns counts only and never applicant data.
+The included `vercel.json` runs this maintenance job daily at 05:15 UTC. Vercel supplies the configured `CRON_SECRET` as a bearer token.
 
 ## Verification
 
 Run `npm run check`. End-to-end checks are available with `npx playwright install chromium && npm run test:e2e`.
+Set `E2E_STAFF_EMAIL` and `E2E_STAFF_PASSWORD` only in the protected CI/staging environment to enable the authenticated dashboard check. Never use a production staff account for automated tests.
 
 ## Operational warning
 
