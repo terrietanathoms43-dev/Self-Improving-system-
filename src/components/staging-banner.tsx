@@ -1,0 +1,1 @@
+export function StagingBanner(){if(process.env.VERCEL_ENV==="production")return null;return <div role="status" className="bg-amber-300 px-4 py-2 text-center text-sm font-semibold text-amber-950">Non-production environment — do not enter real applicant or medical information.</div>}

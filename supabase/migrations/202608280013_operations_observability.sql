@@ -1,0 +1,10 @@
+begin;
+create table public.cbg_maintenance_runs(id bigint generated always as identity primary key,status text not null check(status in('running','succeeded','failed')),checks jsonb not null default '{}',safe_error text,started_at timestamptz not null default now(),completed_at timestamptz);
+create table public.cbg_openai_usage(id bigint generated always as identity primary key,operation text not null check(operation in('assessment_advisory','training')),model text not null,model_version_id uuid references public.cbg_model_versions(id),training_run_id uuid references public.cbg_training_runs(id),prompt_tokens integer check(prompt_tokens>=0),completion_tokens integer check(completion_tokens>=0),total_tokens integer check(total_tokens>=0),estimated_cost_usd numeric(12,6) check(estimated_cost_usd>=0),succeeded boolean not null,created_at timestamptz not null default now());
+create index cbg_maintenance_runs_time_idx on public.cbg_maintenance_runs(started_at desc);create index cbg_openai_usage_time_idx on public.cbg_openai_usage(created_at desc);
+alter table public.cbg_maintenance_runs enable row level security;alter table public.cbg_openai_usage enable row level security;
+create policy cbg_maintenance_admin_read on public.cbg_maintenance_runs for select to authenticated using(private.cbg_has_role('admin'));
+create policy cbg_openai_usage_governance_read on public.cbg_openai_usage for select to authenticated using(private.cbg_has_role('human_oversight_committee') or private.cbg_has_role('admin'));
+grant select on public.cbg_maintenance_runs,public.cbg_openai_usage to authenticated;
+grant usage,select on sequence public.cbg_maintenance_runs_id_seq,public.cbg_openai_usage_id_seq to authenticated;
+commit;

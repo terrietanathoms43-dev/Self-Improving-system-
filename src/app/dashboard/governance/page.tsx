@@ -106,6 +106,7 @@ export default async function Governance() {
               <p className="text-sm text-slate-500">
                 {e.dataset_name} · {e.dataset_version}
               </p>
+              <EvaluationSummary summary={e.summary as Record<string,unknown>}/>
             </div>
           ))}
         </div>
@@ -115,3 +116,5 @@ export default async function Governance() {
     </>
   );
 }
+
+function EvaluationSummary({summary}:{summary:Record<string,unknown>}){const accuracy=Math.max(0,Math.min(100,Number(summary.accuracy??0)*100));const gap=summary.subgroup_accuracy_gap==null?null:Math.max(0,Math.min(100,Number(summary.subgroup_accuracy_gap)*100));return <div className="mt-3 space-y-3 text-xs"><div><div className="flex justify-between"><span>Accuracy</span><strong>{accuracy.toFixed(1)}%</strong></div><div className="mt-1 h-2 overflow-hidden rounded bg-slate-200"><div className="h-full bg-teal-600" style={{width:`${accuracy}%`}}/></div></div><div className="grid grid-cols-2 gap-2"><div className="rounded bg-white p-2"><span className="text-slate-500">Regressions</span><p className="text-lg font-bold">{String(summary.regressions??"—")}</p></div><div className="rounded bg-white p-2"><span className="text-slate-500">Fairness gap</span><p className="text-lg font-bold">{gap==null?"Not measured":`${gap.toFixed(1)}%`}</p></div></div><p className={summary.criteria_met?"text-emerald-700":"text-red-700"}>{summary.criteria_met?"All activation gates met":"Not eligible for activation"}</p></div>}

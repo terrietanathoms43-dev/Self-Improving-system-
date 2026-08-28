@@ -1,6 +1,7 @@
 import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge, Button, Select, Textarea } from "@/components/ui";
+import { Card, Badge, Select, Textarea } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { updateInvestigation } from "./actions";
 export default async function Fairness() {
   await requireActor();
@@ -34,7 +35,7 @@ export default async function Fairness() {
             <p className="mt-2 text-sm text-slate-600">
               {a.investigation_question}
             </p>
-            <form action={updateInvestigation} className="mt-4 grid gap-2"><input type="hidden" name="alertId" value={a.id}/><Select name="status" defaultValue={a.status}><option value="investigating">Investigating</option><option value="resolved">Resolved</option><option value="dismissed">Dismissed</option></Select><Textarea name="finding" defaultValue={a.finding??""} minLength={20} placeholder="Investigation scope, evidence, and finding" required/><Button>Save investigation</Button></form>
+            <form action={updateInvestigation} className="mt-4 grid gap-2"><input type="hidden" name="alertId" value={a.id}/><Select name="status" defaultValue={a.status}><option value="investigating">Investigating</option><option value="resolved">Resolved</option><option value="dismissed">Dismissed</option></Select><Textarea name="finding" defaultValue={a.finding??""} minLength={20} placeholder="Investigation scope, evidence, and finding" required/><SubmitButton pendingLabel="Saving investigation…">Save investigation</SubmitButton></form>
           </Card>
         ))}
         {!alerts?.length ? (

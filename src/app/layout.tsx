@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { StagingBanner } from "@/components/staging-banner";
 export const metadata: Metadata = {
   title: "CareBridge Jamaica | AI Review & Governance",
   description:
@@ -13,6 +14,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <StagingBanner />
         <a href="#main" className="skip-link">
           Skip to main content
         </a>

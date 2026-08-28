@@ -1,7 +1,9 @@
 import { requireActor } from "@/lib/auth";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
-import { Badge, Button, Card, Input, Select, Textarea } from "@/components/ui";
+import { Badge, Card, Input, Select, Textarea } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { decideRetention, refreshRetentionQueue } from "./actions";
+const systemQueryTime=new Date();
 export default async function SystemPage() {
   await requireActor(["admin"]);
   const s = await createClient();
@@ -11,6 +13,10 @@ export default async function SystemPage() {
     { count: errors },
     { data: latestFairness },
     { count: openAlerts },
+    { data: lastMaintenance },
+    { count: failedEvaluations },
+    { count: overdueAppeals },
+    { data: usage },
   ] = await Promise.all([
     s
       .from("cbg_retention_reviews")
@@ -29,6 +35,10 @@ export default async function SystemPage() {
       .from("cbg_fairness_alerts")
       .select("id", { count: "exact", head: true })
       .in("status", ["open", "investigating"]),
+    admin.from("cbg_maintenance_runs").select("status,checks,safe_error,completed_at").order("started_at",{ascending:false}).limit(1).maybeSingle(),
+    admin.from("cbg_model_evaluations").select("id",{count:"exact",head:true}).eq("status","failed"),
+    admin.from("cbg_appeals").select("id",{count:"exact",head:true}).in("status",["open","under_review"]).lt("submitted_at",new Date(systemQueryTime.getTime()-7*86400000).toISOString()),
+    admin.from("cbg_openai_usage").select("total_tokens,estimated_cost_usd,succeeded").gte("created_at",new Date(systemQueryTime.getTime()-30*86400000).toISOString()),
   ]);
   const checks = [
     ...[
@@ -46,6 +56,7 @@ export default async function SystemPage() {
       ok: Boolean(latestFairness?.computed_at),
     },
   ];
+  const tokens=(usage??[]).reduce((sum,row)=>sum+(row.total_tokens??0),0);const estimatedCost=(usage??[]).reduce((sum,row)=>sum+Number(row.estimated_cost_usd??0),0);
   return (
     <>
       <h1 className="text-3xl font-bold">System health and retention</h1>
@@ -66,6 +77,8 @@ export default async function SystemPage() {
           <p className="text-3xl font-bold">{reviews?.length ?? 0}</p>
         </Card>
       </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-3"><Card><p className="text-sm text-slate-500">Failed evaluations</p><p className="text-3xl font-bold">{failedEvaluations??0}</p></Card><Card><p className="text-sm text-slate-500">Appeals open over 7 days</p><p className="text-3xl font-bold">{overdueAppeals??0}</p></Card><Card><p className="text-sm text-slate-500">OpenAI usage · 30 days</p><p className="text-xl font-bold">{tokens.toLocaleString()} tokens</p><p className="text-xs text-slate-500">Recorded estimate: ${estimatedCost.toFixed(2)}</p></Card></div>
+      <Card className="mt-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Scheduled maintenance</h2><p className="mt-1 text-sm text-slate-600">Overdue cases, appeals, failed evaluations, fairness alerts, and notification delivery.</p></div><Badge tone={lastMaintenance?.status==="succeeded"?"success":"danger"}>{lastMaintenance?.status??"not yet recorded"}</Badge></div><p className="mt-3 text-sm text-slate-500">Last completed: {lastMaintenance?.completed_at?new Date(lastMaintenance.completed_at).toLocaleString("en-JM"):"Waiting for the next scheduled run"}</p>{lastMaintenance?.safe_error?<p className="mt-2 text-sm text-red-700">{lastMaintenance.safe_error}</p>:null}</Card>
       <Card className="mt-6">
         <h2 className="font-semibold">Production configuration</h2>
         <div className="mt-4 grid gap-2 md:grid-cols-2">
@@ -91,7 +104,7 @@ export default async function SystemPage() {
             </p>
           </div>
           <form action={refreshRetentionQueue}>
-            <Button>Refresh queue</Button>
+            <SubmitButton pendingLabel="Refreshing…">Refresh queue</SubmitButton>
           </form>
         </div>
         <div className="mt-4 space-y-4">
@@ -138,7 +151,7 @@ export default async function SystemPage() {
                     placeholder="Evidence-based retention decision"
                     required
                   />
-                  <Button className="md:col-span-2">Record decision</Button>
+                  <SubmitButton pendingLabel="Recording decision…" className="md:col-span-2">Record decision</SubmitButton>
                 </div>
               ) : null}
             </form>
@@ -151,12 +164,7 @@ export default async function SystemPage() {
           Aggregated fairness data only; applicant and medical details are
           excluded. Every export is rate-limited and audited.
         </p>
-        <a
-          className="mt-4 inline-flex h-10 items-center rounded-lg bg-teal-600 px-4 text-sm font-semibold text-white"
-          href="/api/exports/fairness"
-        >
-          Download fairness CSV
-        </a>
+        <div className="mt-4 flex flex-wrap gap-3"><a className="inline-flex h-10 items-center rounded-lg bg-teal-600 px-4 text-sm font-semibold text-white" href="/api/exports/fairness">Download fairness CSV</a><a className="inline-flex h-10 items-center rounded-lg border border-teal-700 px-4 text-sm font-semibold text-teal-800" href="/api/exports/governance">Download governance CSV</a></div>
       </Card>
     </>
   );
