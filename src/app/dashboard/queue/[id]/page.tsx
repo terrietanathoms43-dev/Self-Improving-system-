@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Badge, Button, Card, Input } from "@/components/ui";
+import { Badge, Card, Input } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { runAssessment, submitHumanReview } from "../actions";
 const scores = [
   ["medicalUrgency", "Medical urgency", 30],
@@ -30,11 +31,14 @@ const flags = [
 ] as const;
 export default async function CasePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ success?: string }>;
 }) {
   await requireActor();
   const { id } = await params;
+  const { success } = await searchParams;
   const s = await createClient();
   const { data: c } = await s
     .from("cbg_applications")
@@ -70,6 +74,7 @@ export default async function CasePage({
       <p className="mt-2 text-slate-600">
         Authorized case workspace · {c.parish}
       </p>
+      {success ? <p role="status" className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{success}</p> : null}
       {latest ? (
         <div className="mt-6 space-y-6">
           <Card>
@@ -220,9 +225,9 @@ export default async function CasePage({
                   className="mt-1 min-h-24 w-full rounded-lg border p-3"
                 />
               </label>
-              <Button className="sm:col-span-2" type="submit">
+              <SubmitButton className="sm:col-span-2" pendingLabel="Saving review…">
                 Save human review and final decision
-              </Button>
+              </SubmitButton>
             </form>
           </Card>
         </div>
@@ -278,9 +283,9 @@ export default async function CasePage({
                 ))}
               </div>
             </fieldset>
-            <Button type="submit">
+            <SubmitButton pendingLabel="Running assessment…">
               Create assessment and route to human review
-            </Button>
+            </SubmitButton>
           </form>
         </Card>
       )}

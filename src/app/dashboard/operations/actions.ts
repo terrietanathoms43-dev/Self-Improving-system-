@@ -83,10 +83,9 @@ export async function submitAppeal(formData: FormData) {
 
 const appealDecisionSchema = z.object({ appealId: z.uuid(), outcome: z.enum(["upheld", "modified", "overturned", "more_information"]), explanation: z.string().min(20).max(5000) });
 export async function decideAppeal(formData: FormData) {
-  const actor = await requireActor(["appeals_reviewer", "admin"]); const parsed = appealDecisionSchema.safeParse(values(formData)); if (!parsed.success) throw new Error("Appeal decision is incomplete");
-  const s = await createClient(); const { error } = await s.from("cbg_appeal_decisions").insert({ appeal_id: parsed.data.appealId, outcome: parsed.data.outcome, explanation: parsed.data.explanation, decided_by: actor.id }); if (error) throw error;
-  await s.from("cbg_appeals").update({ status: "decided", updated_at: new Date().toISOString() }).eq("id", parsed.data.appealId);
-  await audit("appeal_decided", "appeal", parsed.data.appealId, { outcome: parsed.data.outcome }); revalidatePath("/dashboard/appeals");
+  await requireActor(["appeals_reviewer", "admin"]); const parsed = appealDecisionSchema.safeParse(values(formData)); if (!parsed.success) throw new Error("Appeal decision is incomplete");
+  const s = await createClient(); const { error } = await s.rpc("cbg_decide_appeal_atomic", { p_appeal_id: parsed.data.appealId, p_outcome: parsed.data.outcome, p_explanation: parsed.data.explanation }); if (error) throw error;
+  revalidatePath("/dashboard/appeals"); redirect("/dashboard/appeals?success=Appeal+decision+recorded");
 }
 
 const documentSchema = z.object({ applicationId: z.uuid(), documentType: z.string().min(2).max(80) });

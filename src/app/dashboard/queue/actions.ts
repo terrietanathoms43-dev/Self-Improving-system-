@@ -1,12 +1,13 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { assessApplication, assessmentInputSchema } from "@/lib/assessment";
 const formSchema = assessmentInputSchema.extend({ applicationId: z.uuid() });
 export async function runAssessment(formData: FormData) {
-  const actor = await requireActor([
+  await requireActor([
     "case_review_committee",
     "human_oversight_committee",
     "admin",
@@ -50,28 +51,23 @@ export async function runAssessment(formData: FormData) {
     .single();
   if (!version) throw new Error("No active rules version");
   const result = assessApplication(input, version.version);
-  const { error } = await s.from("cbg_ai_assessments").insert({
-    application_id: applicationId,
-    model_version_id: version.id,
-    score: result.score,
-    category: result.category,
-    confidence: result.confidence,
-    reasons: result.reasons,
-    risk_factors: result.riskFactors,
-    missing_information: result.missingInformation,
-    fairness_warnings: result.fairnessWarnings,
-    recommended_action: result.recommendedAction,
-    review_pathway: result.reviewPathway,
-    requires_human_review: true,
-    input_snapshot: input,
-    created_by: actor.id,
+  const { error } = await s.rpc("cbg_run_assessment_atomic", {
+    p_application_id: applicationId,
+    p_model_version_id: version.id,
+    p_score: result.score,
+    p_category: result.category,
+    p_confidence: result.confidence,
+    p_reasons: result.reasons,
+    p_risk_factors: result.riskFactors,
+    p_missing_information: result.missingInformation,
+    p_fairness_warnings: result.fairnessWarnings,
+    p_recommended_action: result.recommendedAction,
+    p_review_pathway: result.reviewPathway,
+    p_input_snapshot: input,
   });
   if (error) throw error;
-  await s
-    .from("cbg_applications")
-    .update({ status: "human_review", updated_by: actor.id })
-    .eq("id", applicationId);
   revalidatePath("/dashboard/queue");
+  redirect(`/dashboard/queue/${applicationId}?success=Assessment+created+and+routed+to+human+review`);
 }
 
 const reviewSchema = z.object({
@@ -80,7 +76,7 @@ const reviewSchema = z.object({
   disposition: z.enum(["agree", "modify", "override"]),
   proposedDecision: z.enum(["approve", "modify", "refer", "reject"]),
   finalScore: z.coerce.number().int().min(0).max(100),
-  finalCategory: z.string().min(2).max(40),
+  finalCategory: z.enum(["critical", "high", "moderate", "standard"]),
   evidence: z.string().min(20).max(5000),
   explanation: z.string().min(20).max(5000),
   correctionCategory: z.enum([
@@ -103,8 +99,8 @@ const reviewSchema = z.object({
 export async function submitHumanReview(formData: FormData) {
   const actor = await requireActor([
     "case_review_committee",
-    "human_oversight_committee",
     "appeals_reviewer",
+    "admin",
   ]);
   const parsed = reviewSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) throw new Error("Review is incomplete or invalid");
@@ -122,12 +118,13 @@ export async function submitHumanReview(formData: FormData) {
     p_reviewer_role: actor.roles.find((role) =>
       [
         "case_review_committee",
-        "human_oversight_committee",
         "appeals_reviewer",
+        "admin",
       ].includes(role),
     ),
   });
   if (error) throw error;
   revalidatePath(`/dashboard/queue/${parsed.data.applicationId}`);
   revalidatePath("/dashboard/reviews");
+  redirect(`/dashboard/queue/${parsed.data.applicationId}?success=Human+review+and+final+decision+saved`);
 }
