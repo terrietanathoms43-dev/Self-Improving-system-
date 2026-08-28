@@ -45,6 +45,10 @@ Set both `OPENAI_API_KEY` and `OPENAI_TRAINING_BASE_MODEL`. The base model must 
 3. Set `NEXT_PUBLIC_APP_URL` to the production Vercel domain and add that domain to Supabase Auth URL Configuration.
 4. Deploy. Vercel runs `next build`; GitHub Actions separately runs lint, TypeScript, unit tests, build, and dependency audit.
 
+### First administrator
+
+Because Supabase Authentication is shared with other applications, CareBridge never treats an arbitrary Supabase user as staff. Set `CAREBRIDGE_BOOTSTRAP_ADMIN_EMAIL` to the exact email of the intended first administrator, create that person in Supabase Authentication, then sign in through CareBridge. The app redirects the allow-listed account to `/setup` for one-time initialization. After the first administrator exists, remove `CAREBRIDGE_BOOTSTRAP_ADMIN_EMAIL` from Vercel and redeploy. All later staff accounts must be invited from Staff administration.
+
 For scheduled overdue-case notifications, call `GET /api/maintenance` with `Authorization: Bearer <CRON_SECRET>` from a trusted scheduler. The route returns counts only and never applicant data.
 The included `vercel.json` runs this maintenance job daily at 05:15 UTC. Vercel supplies the configured `CRON_SECRET` as a bearer token.
 

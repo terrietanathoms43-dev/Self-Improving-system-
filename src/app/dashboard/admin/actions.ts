@@ -10,9 +10,9 @@ export async function inviteStaff(fd:FormData){
  const actor=await requireActor(["admin"]);const p=inviteSchema.safeParse(Object.fromEntries(fd));if(!p.success)throw new Error("Valid staff details are required");
  const admin=createAdminClient();const appUrl=process.env.NEXT_PUBLIC_APP_URL;if(!appUrl)throw new Error("NEXT_PUBLIC_APP_URL is not configured");
  const {data,error}=await admin.auth.admin.inviteUserByEmail(p.data.email,{redirectTo:`${appUrl}/auth/callback?next=/reset-password`});if(error||!data.user)throw error??new Error("Invitation failed");
- const s=await createClient();const {error:userError}=await s.from("cbg_users").insert({id:data.user.id,email:p.data.email,display_name:p.data.displayName});if(userError)throw userError;
- const {data:role}=await s.from("cbg_roles").select("id").eq("name",p.data.role).single();if(!role)throw new Error("Role not found");
- const {error:roleError}=await s.from("cbg_user_roles").insert({user_id:data.user.id,role_id:role.id,assigned_by:actor.id});if(roleError)throw roleError;
+ const s=await createClient();const {error:userError}=await s.from("cbg_users").insert({id:data.user.id,email:p.data.email,display_name:p.data.displayName});if(userError){await admin.auth.admin.deleteUser(data.user.id);throw userError;}
+ const {data:role}=await s.from("cbg_roles").select("id").eq("name",p.data.role).single();if(!role){await admin.from("cbg_users").delete().eq("id",data.user.id);await admin.auth.admin.deleteUser(data.user.id);throw new Error("Role not found");}
+ const {error:roleError}=await s.from("cbg_user_roles").insert({user_id:data.user.id,role_id:role.id,assigned_by:actor.id});if(roleError){await admin.from("cbg_users").delete().eq("id",data.user.id);await admin.auth.admin.deleteUser(data.user.id);throw roleError;}
  await s.from("cbg_audit_logs").insert({actor_id:actor.id,actor_role:"admin",action:"staff_invited",entity_type:"user",entity_id:data.user.id,metadata:{role:p.data.role}});revalidatePath("/dashboard/admin");
 }
 const roleSchema=z.object({userId:z.uuid(),role:z.enum(ROLES)});
