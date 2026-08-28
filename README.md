@@ -60,3 +60,5 @@ Set `E2E_STAFF_EMAIL` and `E2E_STAFF_PASSWORD` only in the protected CI/staging 
 ## Operational warning
 
 This software supports, but does not replace, qualified medical, social-work, legal, privacy, or ethics review. Conduct a Jamaican data-protection and clinical-governance review, penetration test, disaster-recovery exercise, accessibility audit, and staff training before processing live sensitive records.
+
+Operational preparation is documented in [the production runbook](docs/PRODUCTION_RUNBOOK.md) and [go-live checklist](docs/GO_LIVE_CHECKLIST.md).

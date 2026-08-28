@@ -14,6 +14,7 @@ import {
   Users,
   Bell,
   BrainCircuit,
+  HeartPulse,
 } from "lucide-react";
 import type { Role } from "@/types/database";
 const allRoles: readonly Role[] = ["intake_officer","medical_verification_officer","social_financial_assessment_officer","case_review_committee","human_oversight_committee","appeals_reviewer","admin"];
@@ -31,6 +32,7 @@ const links: readonly [string,string,typeof LayoutDashboard,readonly Role[]][] =
   ["/dashboard/governance", "Rules & governance", GitBranch, ["human_oversight_committee","admin"]],
   ["/dashboard/training", "OpenAI training", BrainCircuit, ["human_oversight_committee","admin"]],
   ["/dashboard/audit", "Audit log", ScrollText, ["human_oversight_committee","admin"]],
+  ["/dashboard/system", "System health", HeartPulse, ["admin"]],
 ];
 export function AppShell({
   children,

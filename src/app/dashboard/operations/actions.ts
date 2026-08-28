@@ -26,30 +26,23 @@ const intakeSchema = z.object({
 });
 
 export async function createApplication(formData: FormData) {
-  const actor = await requireActor(["intake_officer", "admin"]);
+  await requireActor(["intake_officer", "admin"]);
   const raw = values(formData);
   for (const key of ["rural", "disability", "caregiving", "welfare"]) raw[key] = raw[key] === "on";
   const parsed = intakeSchema.safeParse(raw);
   if (!parsed.success) redirect("/dashboard/intake?error=Please+check+the+required+fields");
   const s = await createClient();
   const reference = `CBJ-${new Date().getUTCFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`;
-  const { data: application, error } = await s.from("cbg_applications").insert({
-    reference_number: reference, parish: parsed.data.parish, rural: parsed.data.rural, consent_status: "granted",
-    consent_recorded_at: new Date().toISOString(), consent_version: parsed.data.consentVersion, status: "medical_verification",
-    created_by: actor.id, updated_by: actor.id, retention_until: new Date(Date.now() + 7 * 365 * 86400000).toISOString().slice(0, 10),
-  }).select("id").single();
-  if (error || !application) redirect("/dashboard/intake?error=Application+could+not+be+created");
-  const { error: profileError } = await s.from("cbg_applicant_profiles").insert({
-    application_id: application.id, full_name: parsed.data.fullName, date_of_birth: parsed.data.dateOfBirth,
-    phone: parsed.data.phone || null, address: parsed.data.address || null, gender: parsed.data.gender || null,
-    disability_status: parsed.data.disability, insurance_status: parsed.data.insuranceStatus || null,
-    employment_status: parsed.data.employmentStatus || null, caregiving_responsibilities: parsed.data.caregiving,
-    existing_welfare_support: parsed.data.welfare, created_by: actor.id, updated_by: actor.id,
+  const { data: applicationId, error } = await s.rpc("cbg_create_application_atomic",{
+    p_reference:reference,p_parish:parsed.data.parish,p_rural:parsed.data.rural,p_consent_version:parsed.data.consentVersion,
+    p_retention_until:new Date(Date.now()+7*365*86400000).toISOString().slice(0,10),p_full_name:parsed.data.fullName,
+    p_date_of_birth:parsed.data.dateOfBirth,p_phone:parsed.data.phone||"",p_address:parsed.data.address||"",p_gender:parsed.data.gender||"",
+    p_disability:parsed.data.disability,p_insurance:parsed.data.insuranceStatus||"",p_employment:parsed.data.employmentStatus||"",
+    p_caregiving:parsed.data.caregiving,p_welfare:parsed.data.welfare
   });
-  if (profileError) throw profileError;
-  await audit("application_created", "application", application.id, { reference, consent_version: parsed.data.consentVersion });
+  if(error||!applicationId)redirect("/dashboard/intake?error=Application+could+not+be+created");
   revalidatePath("/dashboard/queue");
-  redirect(`/dashboard/queue/${application.id}?success=Application+created`);
+  redirect(`/dashboard/queue/${applicationId}?success=Application+created`);
 }
 
 const medicalSchema = z.object({ applicationId: z.uuid(), urgencyScore: z.coerce.number().int().min(0).max(30), summary: z.string().min(20).max(5000), documentsComplete: z.string().optional() });
@@ -80,13 +73,12 @@ export async function submitSocialAssessment(formData: FormData) {
 
 const appealSchema = z.object({ applicationId: z.uuid(), reason: z.string().min(20).max(5000), evidence: z.string().max(5000).optional() });
 export async function submitAppeal(formData: FormData) {
-  const actor = await requireActor(["appeals_reviewer", "case_review_committee", "admin"]);
+  await requireActor(["appeals_reviewer", "case_review_committee", "admin"]);
   const parsed = appealSchema.safeParse(values(formData)); if (!parsed.success) throw new Error("Appeal details are incomplete");
   const s = await createClient();
-  const { data, error } = await s.from("cbg_appeals").insert({ application_id: parsed.data.applicationId, reason: parsed.data.reason, evidence: parsed.data.evidence ? [parsed.data.evidence] : [], created_by: actor.id }).select("id").single();
+  const { data, error } = await s.rpc("cbg_submit_appeal_atomic",{p_application_id:parsed.data.applicationId,p_reason:parsed.data.reason,p_evidence:parsed.data.evidence||""});
   if (error || !data) throw error ?? new Error("Appeal was not created");
-  await s.from("cbg_applications").update({ status: "appealed", updated_by: actor.id }).eq("id", parsed.data.applicationId);
-  await audit("appeal_submitted", "appeal", data.id, { application_id: parsed.data.applicationId }); revalidatePath("/dashboard/appeals");
+  revalidatePath("/dashboard/appeals");
 }
 
 const appealDecisionSchema = z.object({ appealId: z.uuid(), outcome: z.enum(["upheld", "modified", "overturned", "more_information"]), explanation: z.string().min(20).max(5000) });
