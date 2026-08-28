@@ -47,28 +47,26 @@ export async function createApplication(formData: FormData) {
 
 const medicalSchema = z.object({ applicationId: z.uuid(), urgencyScore: z.coerce.number().int().min(0).max(30), summary: z.string().min(20).max(5000), documentsComplete: z.string().optional() });
 export async function submitMedicalVerification(formData: FormData) {
-  const actor = await requireActor(["medical_verification_officer", "admin"]);
+  await requireActor(["medical_verification_officer", "admin"]);
   const parsed = medicalSchema.safeParse(values(formData));
-  if (!parsed.success) throw new Error("Medical verification is incomplete");
+  if (!parsed.success) redirect("/dashboard/verification?error=Check+the+medical+score+and+enter+a+summary+of+at+least+20+characters");
   const s = await createClient();
-  const { error } = await s.from("cbg_medical_verifications").upsert({ application_id: parsed.data.applicationId, urgency_score: parsed.data.urgencyScore, summary: parsed.data.summary, documents_complete: parsed.data.documentsComplete === "on", verified_by: actor.id, verified_at: new Date().toISOString() }, { onConflict: "application_id" });
-  if (error) throw error;
-  await s.from("cbg_applications").update({ status: "social_assessment", updated_by: actor.id }).eq("id", parsed.data.applicationId);
-  await audit("medical_verification_completed", "application", parsed.data.applicationId);
+  const { error } = await s.rpc("cbg_complete_medical_verification",{p_application_id:parsed.data.applicationId,p_urgency_score:parsed.data.urgencyScore,p_summary:parsed.data.summary,p_documents_complete:parsed.data.documentsComplete==="on"});
+  if (error) redirect("/dashboard/verification?error=This+case+could+not+be+verified.+It+may+have+already+moved+to+another+stage");
   revalidatePath("/dashboard/verification");
+  redirect("/dashboard/verification?success=Medical+verification+completed");
 }
 
 const socialSchema = z.object({ applicationId: z.uuid(), financial: z.coerce.number().int().min(0).max(20), access: z.coerce.number().int().min(0).max(20), unmet: z.coerce.number().int().min(0).max(15), vulnerability: z.coerce.number().int().min(0).max(10), support: z.coerce.number().int().min(0).max(5), summary: z.string().min(20).max(5000), missed: z.string().optional(), transport: z.string().optional(), family: z.string().optional() });
 export async function submitSocialAssessment(formData: FormData) {
-  const actor = await requireActor(["social_financial_assessment_officer", "admin"]);
+  await requireActor(["social_financial_assessment_officer", "admin"]);
   const parsed = socialSchema.safeParse(values(formData));
-  if (!parsed.success) throw new Error("Social assessment is incomplete");
+  if (!parsed.success) redirect("/dashboard/verification?error=Check+all+social+assessment+scores+and+enter+a+summary+of+at+least+20+characters");
   const s = await createClient();
-  const { error } = await s.from("cbg_social_assessments").upsert({ application_id: parsed.data.applicationId, financial_hardship_score: parsed.data.financial, access_barrier_score: parsed.data.access, unmet_need_score: parsed.data.unmet, vulnerability_score: parsed.data.vulnerability, support_gap_score: parsed.data.support, missed_appointments: parsed.data.missed === "on", transport_difficulty: parsed.data.transport === "on", family_support_available: parsed.data.family === "on", summary: parsed.data.summary, assessed_by: actor.id, assessed_at: new Date().toISOString() }, { onConflict: "application_id" });
-  if (error) throw error;
-  await s.from("cbg_applications").update({ status: "assessment_ready", updated_by: actor.id }).eq("id", parsed.data.applicationId);
-  await audit("social_assessment_completed", "application", parsed.data.applicationId);
+  const { error } = await s.rpc("cbg_complete_social_assessment",{p_application_id:parsed.data.applicationId,p_financial:parsed.data.financial,p_access:parsed.data.access,p_unmet:parsed.data.unmet,p_vulnerability:parsed.data.vulnerability,p_support:parsed.data.support,p_summary:parsed.data.summary,p_missed:parsed.data.missed==="on",p_transport:parsed.data.transport==="on",p_family:parsed.data.family==="on"});
+  if (error) redirect("/dashboard/verification?error=This+case+could+not+be+assessed.+It+may+have+already+moved+to+another+stage");
   revalidatePath("/dashboard/verification"); revalidatePath("/dashboard/queue");
+  redirect("/dashboard/verification?success=Social+assessment+completed+and+case+routed+to+the+assessment+queue");
 }
 
 const appealSchema = z.object({ applicationId: z.uuid(), reason: z.string().min(20).max(5000), evidence: z.string().max(5000).optional() });
