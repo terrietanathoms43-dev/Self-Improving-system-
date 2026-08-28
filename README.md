@@ -23,12 +23,25 @@ Production-oriented Next.js application for human-governed medical-assistance as
 6. Insert an initial `cbg_model_versions` draft, evaluate and approve it, then activate it through the governance workflow.
 7. Run `npm run dev`.
 
-Never expose `SUPABASE_SECRET_KEY` or `OPENAI_API_KEY` to browser code. Only variables prefixed with `NEXT_PUBLIC_` are client-visible. The optional OpenAI key may support administrative drafting or summarization in future, but it is not used to make final decisions or silently modify rules.
+Never expose `SUPABASE_SECRET_KEY` or `OPENAI_API_KEY` to browser code. Only variables prefixed with `NEXT_PUBLIC_` are client-visible. OpenAI is a required server-side dependency for the governed training workflow. It is never used to diagnose, issue final sensitive decisions, or silently modify or activate production rules.
+
+### Controlled OpenAI training
+
+The OpenAI training workspace creates immutable JSONL datasets from completed human reviews. It uses an explicit allow-list of numeric assessment factors, safeguard flags, and verified outcomes; names, contact details, application identifiers, uploaded documents, medical narratives, and reviewer evidence are excluded. The workflow requires:
+
+1. dataset preparation from at least 10 verified reviews;
+2. conflict-free Human Oversight Committee dataset approval;
+3. a separately explained training authorization;
+4. provider job-status synchronization;
+5. regression and fairness evaluation; and
+6. a separate manual committee decision before any model or rules version can be activated.
+
+Set both `OPENAI_API_KEY` and `OPENAI_TRAINING_BASE_MODEL`. The base model must be one that your OpenAI project is currently permitted to fine-tune. Provider refusal or account ineligibility is recorded as an unavailable run and never weakens the governance controls.
 
 ## Vercel deployment
 
 1. Import the GitHub repository into Vercel.
-2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `RATE_LIMIT_SALT`, `CRON_SECRET`, `NEXT_PUBLIC_APP_URL`, and optionally `OPENAI_API_KEY` in Project Settings → Environment Variables.
+2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `OPENAI_API_KEY`, `OPENAI_TRAINING_BASE_MODEL`, `RATE_LIMIT_SALT`, `CRON_SECRET`, and `NEXT_PUBLIC_APP_URL` in Project Settings → Environment Variables.
 3. Set `NEXT_PUBLIC_APP_URL` to the production Vercel domain and add that domain to Supabase Auth URL Configuration.
 4. Deploy. Vercel runs `next build`; GitHub Actions separately runs lint, TypeScript, unit tests, build, and dependency audit.
 

@@ -13,6 +13,7 @@ import {
   Files,
   Users,
   Bell,
+  BrainCircuit,
 } from "lucide-react";
 import type { Role } from "@/types/database";
 const links = [
@@ -27,6 +28,7 @@ const links = [
   ["/dashboard/notifications", "Notifications", Bell],
   ["/dashboard/fairness", "Fairness monitoring", Scale],
   ["/dashboard/governance", "Rules & governance", GitBranch],
+  ["/dashboard/training", "OpenAI training", BrainCircuit],
   ["/dashboard/audit", "Audit log", ScrollText],
 ] as const;
 export function AppShell({
