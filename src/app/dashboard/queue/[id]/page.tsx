@@ -40,13 +40,13 @@ export default async function CasePage({
   const { id } = await params;
   const { success } = await searchParams;
   const s = await createClient();
-  const { data: c } = await s
+  const [{ data: c },{data:latest},{data:finalDecision}] = await Promise.all([s
     .from("cbg_applications")
     .select(
-      "id,reference_number,status,parish,rural,cbg_medical_verifications(*),cbg_social_assessments(*),cbg_ai_assessments(*,cbg_model_versions(version))",
+      "id,reference_number,status,parish,rural,cbg_medical_verifications(*),cbg_social_assessments(*)",
     )
     .eq("id", id)
-    .single();
+    .single(),s.from("cbg_ai_assessments").select("*,cbg_model_versions(version)").eq("application_id",id).order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle(),s.from("cbg_final_decisions").select("id,decision,decided_at").eq("application_id",id).maybeSingle()]);
   if (!c) notFound();
   const medical = Array.isArray(c.cbg_medical_verifications)
     ? c.cbg_medical_verifications[0]
@@ -62,9 +62,7 @@ export default async function CasePage({
     vulnerability: social?.vulnerability_score ?? 0,
     supportGap: social?.support_gap_score ?? 0,
   };
-  const latest = Array.isArray(c.cbg_ai_assessments)
-    ? c.cbg_ai_assessments.at(-1)
-    : null;
+  const finalized=Boolean(finalDecision)||["decided","appealed","closed"].includes(c.status);
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
@@ -119,7 +117,7 @@ export default async function CasePage({
               required before any final decision.
             </div>
           </Card>
-          <Card>
+          {finalized ? <Card><h2 className="text-lg font-semibold">Review finalized</h2><p className="mt-2 text-sm text-slate-600">A final human decision has already been recorded{finalDecision?.decided_at?` on ${new Date(finalDecision.decided_at).toLocaleString("en-JM")}`:""}. Review controls are locked to prevent duplicate decisions.</p>{finalDecision?.decision?<p className="mt-3"><Badge tone="success">{finalDecision.decision}</Badge></p>:null}</Card> : <Card>
             <h2 className="text-lg font-semibold">
               Record qualified human review
             </h2>
@@ -229,7 +227,7 @@ export default async function CasePage({
                 Save human review and final decision
               </SubmitButton>
             </form>
-          </Card>
+          </Card>}
         </div>
       ) : (
         <Card className="mt-6">

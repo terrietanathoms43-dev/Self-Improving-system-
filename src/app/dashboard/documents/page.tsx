@@ -1,6 +1,7 @@
 import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Button, Card, Input, Select } from "@/components/ui";
+import { Card, Input, Select } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { openDocument, uploadDocument } from "../operations/actions";
 export default async function DocumentsPage() {
   await requireActor([
@@ -50,7 +51,7 @@ export default async function DocumentsPage() {
             accept="application/pdf,image/jpeg,image/png"
             required
           />
-          <Button className="md:col-span-3">Upload securely</Button>
+          <SubmitButton className="md:col-span-3">Upload securely</SubmitButton>
         </form>
       </Card>
       <Card className="mt-6">
@@ -76,7 +77,7 @@ export default async function DocumentsPage() {
               </div>
               <form action={openDocument}>
                 <input type="hidden" name="documentId" value={d.id} />
-                <Button>Open for 60 seconds</Button>
+                <SubmitButton>Open for 60 seconds</SubmitButton>
               </form>
             </div>
           ))}

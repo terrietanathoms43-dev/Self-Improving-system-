@@ -1,4 +1,6 @@
 import "server-only";
+import { z } from "zod";
+import type { AssessmentInput, AssessmentResult } from "@/types/database";
 
 const endpoint = "https://api.openai.com/v1";
 function config() {
@@ -27,3 +29,10 @@ export async function getOpenAITrainingJob(jobId: string) {
   return openAI(`/fine_tuning/jobs/${encodeURIComponent(jobId)}`, { method: "GET" }) as Promise<{ id: string; status: string; fine_tuned_model?: string | null; finished_at?: number | null; error?: { message?: string } | null }>;
 }
 export function isOpenAIConfigured() { return Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_TRAINING_BASE_MODEL); }
+
+const advisorySchema=z.object({confidence:z.number().min(0).max(100),reasons:z.array(z.string().min(1).max(300)).max(12),riskFactors:z.array(z.string().min(1).max(300)).max(12),missingInformation:z.array(z.string().min(1).max(300)).max(12),fairnessWarnings:z.array(z.string().min(1).max(300)).max(12),recommendedAction:z.string().min(1).max(1000),reviewPathway:z.string().min(1).max(1000)});
+export async function createOpenAIAdvisory(model:string,input:AssessmentInput,authoritative:AssessmentResult){
+  const response=await openAI("/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model,temperature:0,messages:[{role:"system",content:"You are a constrained advisory assistant for a Jamaican medical-assistance fund. Do not diagnose. Do not make a final decision. The deterministic score and category are immutable. Explain safeguards and human-review needs using only the supplied de-identified fields. Return JSON only."},{role:"user",content:JSON.stringify({deidentifiedInput:input,lockedScore:authoritative.score,lockedCategory:authoritative.category,lockedSafeguards:{requiresHumanReview:true,noAiOnlyRejection:true}})}],response_format:{type:"json_object"}})}) as {choices?:Array<{message?:{content?:string}}>};
+  const content=response.choices?.[0]?.message?.content;if(!content)throw new Error("OpenAI advisory returned no content");
+  return advisorySchema.parse(JSON.parse(content));
+}

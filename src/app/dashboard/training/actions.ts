@@ -77,6 +77,7 @@ export async function syncTrainingRun(fd: FormData) {
   const job = await getOpenAITrainingJob(run.provider_job_id);
   const mapped = job.status === "succeeded" ? "succeeded" : job.status === "failed" ? "failed" : job.status === "cancelled" ? "cancelled" : "running";
   await admin.from("cbg_training_runs").update({ status: mapped, output_model: mapped === "succeeded" ? job.fine_tuned_model ?? null : null, safe_error: job.error?.message?.slice(0, 300) ?? null, completed_at: ["succeeded","failed","cancelled"].includes(mapped) ? new Date().toISOString() : null }).eq("id", runId);
+  if(mapped==="succeeded"&&job.fine_tuned_model){const {error:registryError}=await admin.from("cbg_trained_models").upsert({training_run_id:runId,provider_model_id:job.fine_tuned_model,status:"registered",registered_by:actor.id,metadata:{provider_job_id:run.provider_job_id}},{onConflict:"training_run_id"});if(registryError)throw registryError;}
   const s = await createClient();
   await s.from("cbg_audit_logs").insert({ actor_id: actor.id, actor_role: actor.roles[0], action: "training_status_synchronized", entity_type: "training_run", entity_id: runId, metadata: { status: mapped } });
   revalidatePath("/dashboard/training");

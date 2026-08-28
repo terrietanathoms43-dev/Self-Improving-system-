@@ -5,6 +5,8 @@ import { z } from "zod";
 import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { assessApplication, assessmentInputSchema } from "@/lib/assessment";
+import { createOpenAIAdvisory } from "@/lib/openai/server";
+import { createAdminClient } from "@/lib/supabase/server";
 const formSchema = assessmentInputSchema.extend({ applicationId: z.uuid() });
 export async function runAssessment(formData: FormData) {
   await requireActor([
@@ -46,11 +48,18 @@ export async function runAssessment(formData: FormData) {
   const s = await createClient();
   const { data: version } = await s
     .from("cbg_model_versions")
-    .select("id,version")
+    .select("id,version,model_type,trained_model_id,cbg_trained_models(provider_model_id,status)")
     .eq("status", "active")
     .single();
   if (!version) throw new Error("No active rules version");
-  const result = assessApplication(input, version.version);
+  const deterministic = assessApplication(input, version.version);
+  let result=deterministic;
+  let advisoryMetadata:Record<string,unknown>={used:false};
+  const trained=version.cbg_trained_models as unknown as {provider_model_id:string;status:string}|null;
+  if(version.model_type==="rules_with_advisory"&&trained?.status==="eligible"){
+    try{const advisory=await createOpenAIAdvisory(trained.provider_model_id,input,deterministic);result={...deterministic,...advisory,score:deterministic.score,category:deterministic.category,requiresHumanReview:true,rulesVersion:deterministic.rulesVersion};advisoryMetadata={used:true,trainedModelId:version.trained_model_id};}
+    catch{const eventId=crypto.randomUUID();console.error(JSON.stringify({level:"error",eventId,operation:"openai_assessment_advisory",code:"ADVISORY_FALLBACK"}));await createAdminClient().from("cbg_error_events").insert({event_id:eventId,route:"/dashboard/queue/[id]",operation:"openai_assessment_advisory",error_code:"ADVISORY_FALLBACK",safe_message:"The governed advisory model was unavailable; deterministic rules were used.",metadata:{model_version_id:version.id}});advisoryMetadata={used:false,fallback:true,eventId};}
+  }
   const { error } = await s.rpc("cbg_run_assessment_atomic", {
     p_application_id: applicationId,
     p_model_version_id: version.id,
@@ -63,7 +72,7 @@ export async function runAssessment(formData: FormData) {
     p_fairness_warnings: result.fairnessWarnings,
     p_recommended_action: result.recommendedAction,
     p_review_pathway: result.reviewPathway,
-    p_input_snapshot: input,
+    p_input_snapshot: { ...input, advisory: advisoryMetadata },
   });
   if (error) throw error;
   revalidatePath("/dashboard/queue");
