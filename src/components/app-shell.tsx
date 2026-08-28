@@ -16,21 +16,22 @@ import {
   BrainCircuit,
 } from "lucide-react";
 import type { Role } from "@/types/database";
-const links = [
-  ["/dashboard", "Overview", LayoutDashboard],
-  ["/dashboard/intake", "Application intake", UserPlus],
-  ["/dashboard/verification", "Verification", Stethoscope],
-  ["/dashboard/queue", "Assessment queue", ClipboardList],
-  ["/dashboard/reviews", "Decision comparison", GitCompare],
-  ["/dashboard/appeals", "Appeals", Gavel],
-  ["/dashboard/documents", "Secure documents", Files],
-  ["/dashboard/admin", "Staff administration", Users],
-  ["/dashboard/notifications", "Notifications", Bell],
-  ["/dashboard/fairness", "Fairness monitoring", Scale],
-  ["/dashboard/governance", "Rules & governance", GitBranch],
-  ["/dashboard/training", "OpenAI training", BrainCircuit],
-  ["/dashboard/audit", "Audit log", ScrollText],
-] as const;
+const allRoles: readonly Role[] = ["intake_officer","medical_verification_officer","social_financial_assessment_officer","case_review_committee","human_oversight_committee","appeals_reviewer","admin"];
+const links: readonly [string,string,typeof LayoutDashboard,readonly Role[]][] = [
+  ["/dashboard", "Overview", LayoutDashboard, allRoles],
+  ["/dashboard/intake", "Application intake", UserPlus, ["intake_officer","admin"]],
+  ["/dashboard/verification", "Verification", Stethoscope, ["medical_verification_officer","social_financial_assessment_officer","admin"]],
+  ["/dashboard/queue", "Assessment queue", ClipboardList, ["case_review_committee","human_oversight_committee","admin"]],
+  ["/dashboard/reviews", "Decision comparison", GitCompare, allRoles],
+  ["/dashboard/appeals", "Appeals", Gavel, ["appeals_reviewer","case_review_committee","admin"]],
+  ["/dashboard/documents", "Secure documents", Files, ["intake_officer","medical_verification_officer","social_financial_assessment_officer","case_review_committee","appeals_reviewer","admin"]],
+  ["/dashboard/admin", "Staff administration", Users, ["admin"]],
+  ["/dashboard/notifications", "Notifications", Bell, allRoles],
+  ["/dashboard/fairness", "Fairness monitoring", Scale, allRoles],
+  ["/dashboard/governance", "Rules & governance", GitBranch, ["human_oversight_committee","admin"]],
+  ["/dashboard/training", "OpenAI training", BrainCircuit, ["human_oversight_committee","admin"]],
+  ["/dashboard/audit", "Audit log", ScrollText, ["human_oversight_committee","admin"]],
+];
 export function AppShell({
   children,
   email,
@@ -61,7 +62,7 @@ export function AppShell({
             aria-label="Primary"
             className="flex gap-2 overflow-x-auto lg:flex-col"
           >
-            {links.map(([href, label, Icon]) => (
+            {links.filter(([, , , allowed])=>roles.some(role=>allowed.includes(role))).map(([href, label, Icon]) => (
               <Link
                 key={href}
                 href={href}

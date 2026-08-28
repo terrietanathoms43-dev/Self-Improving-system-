@@ -111,7 +111,7 @@ export async function uploadDocument(formData: FormData) {
 }
 
 export async function openDocument(formData: FormData) {
-  await requireActor(); const id = z.uuid().parse(formData.get("documentId")); const s = await createClient();
+  await requireActor(["intake_officer","medical_verification_officer","social_financial_assessment_officer","case_review_committee","appeals_reviewer","admin"]); const id = z.uuid().parse(formData.get("documentId")); const s = await createClient();
   const { data: doc } = await s.from("cbg_documents").select("application_id,storage_path").eq("id", id).single(); if (!doc) throw new Error("Document not found");
   const { data, error } = await s.storage.from("cbg-case-documents").createSignedUrl(doc.storage_path, 60); if (error) throw error;
   await audit("sensitive_document_read", "document", id, { application_id: doc.application_id }); redirect(data.signedUrl);
