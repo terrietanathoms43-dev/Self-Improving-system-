@@ -4,7 +4,7 @@ import { Card, Input, Select } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { openDocument, uploadDocument } from "../operations/actions";
 export default async function DocumentsPage() {
-  await requireActor([
+  const actor = await requireActor([
     "intake_officer",
     "medical_verification_officer",
     "social_financial_assessment_officer",
@@ -27,6 +27,16 @@ export default async function DocumentsPage() {
       .order("created_at", { ascending: false })
       .limit(100),
   ]);
+  const { error: readAuditError } = await s.from("cbg_audit_logs").insert({
+    actor_id: actor.id,
+    actor_role: actor.roles[0],
+    action: "document_register_read",
+    entity_type: "document_register",
+    entity_id: "recent",
+    metadata: { record_count: docs?.length ?? 0 },
+  });
+  if (readAuditError)
+    throw new Error("The sensitive read could not be recorded safely");
   return (
     <>
       <h1 className="text-3xl font-bold">Secure case documents</h1>

@@ -5,7 +5,7 @@ Production-oriented Next.js application for human-governed medical-assistance as
 ## Safety properties
 
 - The assessment is transparent and deterministic: six bounded components total exactly 100 points.
-- Every assessment is routed to qualified human review.
+- Routine AI recommendations require a concise human safety confirmation; flagged, uncertain, selected, changed, or rejected cases require full qualified human reassessment.
 - AI-only final decisions are blocked in application code and by a PostgreSQL trigger.
 - Missing documents initiate follow-up instead of rejection.
 - Missed appointments, rural access, disability, caregiving, and transport barriers receive contextual safeguards.

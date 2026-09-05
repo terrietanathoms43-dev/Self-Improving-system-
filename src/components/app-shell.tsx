@@ -18,21 +18,100 @@ import {
   CircleHelp,
 } from "lucide-react";
 import type { Role } from "@/types/database";
-const allRoles: readonly Role[] = ["intake_officer","medical_verification_officer","social_financial_assessment_officer","case_review_committee","human_oversight_committee","appeals_reviewer","admin"];
-const links: readonly [string,string,typeof LayoutDashboard,readonly Role[]][] = [
+const allRoles: readonly Role[] = [
+  "intake_officer",
+  "medical_verification_officer",
+  "social_financial_assessment_officer",
+  "case_review_committee",
+  "human_oversight_committee",
+  "appeals_reviewer",
+  "admin",
+];
+const links: readonly [
+  string,
+  string,
+  typeof LayoutDashboard,
+  readonly Role[],
+][] = [
   ["/dashboard", "Overview", LayoutDashboard, allRoles],
-  ["/dashboard/intake", "Application intake", UserPlus, ["intake_officer","admin"]],
-  ["/dashboard/verification", "Verification", Stethoscope, ["medical_verification_officer","social_financial_assessment_officer","admin"]],
-  ["/dashboard/queue", "Assessment queue", ClipboardList, ["case_review_committee","human_oversight_committee","admin"]],
-  ["/dashboard/reviews", "Decision comparison", GitCompare, allRoles],
-  ["/dashboard/appeals", "Appeals", Gavel, ["appeals_reviewer","case_review_committee","admin"]],
-  ["/dashboard/documents", "Secure documents", Files, ["intake_officer","medical_verification_officer","social_financial_assessment_officer","case_review_committee","appeals_reviewer","admin"]],
+  [
+    "/dashboard/intake",
+    "Application intake",
+    UserPlus,
+    ["intake_officer", "admin"],
+  ],
+  [
+    "/dashboard/verification",
+    "Verification",
+    Stethoscope,
+    [
+      "medical_verification_officer",
+      "social_financial_assessment_officer",
+      "admin",
+    ],
+  ],
+  [
+    "/dashboard/queue",
+    "Assessment queue",
+    ClipboardList,
+    [
+      "case_review_committee",
+      "human_oversight_committee",
+      "appeals_reviewer",
+      "admin",
+    ],
+  ],
+  [
+    "/dashboard/reviews",
+    "Decision comparison",
+    GitCompare,
+    [
+      "case_review_committee",
+      "human_oversight_committee",
+      "appeals_reviewer",
+      "admin",
+    ],
+  ],
+  [
+    "/dashboard/appeals",
+    "Appeals",
+    Gavel,
+    ["appeals_reviewer", "case_review_committee", "admin"],
+  ],
+  [
+    "/dashboard/documents",
+    "Secure documents",
+    Files,
+    [
+      "intake_officer",
+      "medical_verification_officer",
+      "social_financial_assessment_officer",
+      "case_review_committee",
+      "appeals_reviewer",
+      "admin",
+    ],
+  ],
   ["/dashboard/admin", "Staff administration", Users, ["admin"]],
   ["/dashboard/notifications", "Notifications", Bell, allRoles],
   ["/dashboard/fairness", "Fairness monitoring", Scale, allRoles],
-  ["/dashboard/governance", "Rules & governance", GitBranch, ["human_oversight_committee","admin"]],
-  ["/dashboard/training", "OpenAI training", BrainCircuit, ["human_oversight_committee","admin"]],
-  ["/dashboard/audit", "Audit log", ScrollText, ["human_oversight_committee","admin"]],
+  [
+    "/dashboard/governance",
+    "Rules & governance",
+    GitBranch,
+    ["human_oversight_committee", "admin"],
+  ],
+  [
+    "/dashboard/training",
+    "OpenAI training",
+    BrainCircuit,
+    ["human_oversight_committee", "admin"],
+  ],
+  [
+    "/dashboard/audit",
+    "Audit log",
+    ScrollText,
+    ["human_oversight_committee", "admin"],
+  ],
   ["/dashboard/system", "System health", HeartPulse, ["admin"]],
   ["/dashboard/help", "Help & walkthrough", CircleHelp, allRoles],
 ];
@@ -66,16 +145,20 @@ export function AppShell({
             aria-label="Primary"
             className="flex gap-2 overflow-x-auto lg:flex-col"
           >
-            {links.filter(([, , , allowed])=>roles.some(role=>allowed.includes(role))).map(([href, label, Icon]) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
+            {links
+              .filter(([, , , allowed]) =>
+                roles.some((role) => allowed.includes(role)),
+              )
+              .map(([href, label, Icon]) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              ))}
           </nav>
           <form action="/auth/signout" method="post" className="mt-6">
             <button className="flex items-center gap-3 px-3 py-2 text-sm text-slate-600">

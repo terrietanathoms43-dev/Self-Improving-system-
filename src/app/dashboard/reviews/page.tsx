@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge } from "@/components/ui";
+import { requireActor } from "@/lib/auth";
 export default async function Reviews() {
+  const actor = await requireActor([
+    "case_review_committee",
+    "human_oversight_committee",
+    "appeals_reviewer",
+    "admin",
+  ]);
   const s = await createClient();
   const { data } = await s
     .from("cbg_human_reviews")
@@ -9,6 +16,16 @@ export default async function Reviews() {
     )
     .order("reviewed_at", { ascending: false })
     .limit(100);
+  const { error: readAuditError } = await s.from("cbg_audit_logs").insert({
+    actor_id: actor.id,
+    actor_role: actor.roles[0],
+    action: "decision_comparison_read",
+    entity_type: "review_register",
+    entity_id: "recent",
+    metadata: { record_count: data?.length ?? 0 },
+  });
+  if (readAuditError)
+    throw new Error("The sensitive read could not be recorded safely");
   return (
     <>
       <h1 className="text-3xl font-bold">AI-versus-human decisions</h1>

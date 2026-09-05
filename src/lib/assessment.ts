@@ -23,11 +23,24 @@ export const assessmentInputSchema = z.object({
   elderly: z.boolean(),
   pregnant: z.boolean(),
 });
+export const assessmentRulesSchema = z
+  .object({
+    critical: z.number().min(1).max(100).default(80),
+    high: z.number().min(1).max(99).default(60),
+    moderate: z.number().min(0).max(98).default(40),
+  })
+  .refine(
+    (rules) => rules.critical > rules.high && rules.high > rules.moderate,
+    { message: "Assessment thresholds must be ordered" },
+  );
+export type AssessmentRules = z.infer<typeof assessmentRulesSchema>;
 export function assessApplication(
   raw: AssessmentInput,
   rulesVersion = "rules-1.0.0",
+  rawRules: unknown = {},
 ): AssessmentResult {
   const i = assessmentInputSchema.parse(raw);
+  const rules = assessmentRulesSchema.parse(rawRules);
   const score =
     i.medicalUrgency +
     i.financialHardship +
@@ -36,11 +49,11 @@ export function assessApplication(
     i.vulnerability +
     i.supportGap;
   const category =
-    score >= 80
+    score >= rules.critical
       ? "critical"
-      : score >= 60
+      : score >= rules.high
         ? "high"
-        : score >= 40
+        : score >= rules.moderate
           ? "moderate"
           : "standard";
   const reasons = [
@@ -106,7 +119,7 @@ export function assessApplication(
       ? "Request missing information and retain in human-review queue"
       : mandatory
         ? "Route for qualified human reassessment"
-        : score >= 60
+        : score >= rules.high
           ? "Advance through the priority decision pathway"
           : "Advance through the routine decision pathway",
     reviewPathway: mandatory
@@ -116,12 +129,40 @@ export function assessApplication(
     rulesVersion,
   };
 }
-export type ReviewRoute={type:"mandatory"|"quality_assurance"|"routine";rationale:string;requiresHumanReview:boolean};
-export function determineReviewRoute(result:AssessmentResult,applicationId:string,qaPercent=10):ReviewRoute{
-  if(result.requiresHumanReview)return {type:"mandatory",rationale:result.riskFactors[0]??result.missingInformation[0]??result.fairnessWarnings[0]??"Assessment safeguards require qualified human reassessment.",requiresHumanReview:true};
-  const bucket=[...applicationId].reduce((sum,char)=>sum+char.charCodeAt(0),0)%100;
-  if(bucket<qaPercent)return {type:"quality_assurance",rationale:"Selected by the documented quality-assurance sampling rule.",requiresHumanReview:true};
-  return {type:"routine",rationale:"High-confidence routine assessment with no mandatory-review safeguard flags.",requiresHumanReview:false};
+export type ReviewRoute = {
+  type: "mandatory" | "quality_assurance" | "routine";
+  rationale: string;
+  requiresHumanReview: boolean;
+};
+export function determineReviewRoute(
+  result: AssessmentResult,
+  applicationId: string,
+  qaPercent = 10,
+): ReviewRoute {
+  if (result.requiresHumanReview)
+    return {
+      type: "mandatory",
+      rationale:
+        result.riskFactors[0] ??
+        result.missingInformation[0] ??
+        result.fairnessWarnings[0] ??
+        "Assessment safeguards require qualified human reassessment.",
+      requiresHumanReview: true,
+    };
+  const bucket =
+    [...applicationId].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 100;
+  if (bucket < qaPercent)
+    return {
+      type: "quality_assurance",
+      rationale: "Selected by the documented quality-assurance sampling rule.",
+      requiresHumanReview: true,
+    };
+  return {
+    type: "routine",
+    rationale:
+      "High-confidence routine assessment with no mandatory-review safeguard flags.",
+    requiresHumanReview: false,
+  };
 }
 export function canCreateFinalDecision(
   source: "human" | "ai",

@@ -18,7 +18,8 @@ export async function getDashboardMetrics() {
     s
       .from("cbg_model_versions")
       .select("version,status,activated_at")
-      .order("created_at", { ascending: false })
+      .eq("status", "active")
+      .order("activated_at", { ascending: false })
       .limit(1),
   ]);
   return {

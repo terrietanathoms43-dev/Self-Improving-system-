@@ -4,24 +4,28 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge, Card } from "@/components/ui";
 export default async function Queue() {
   await requireActor([
-    "intake_officer",
-    "medical_verification_officer",
-    "social_financial_assessment_officer",
     "case_review_committee",
     "human_oversight_committee",
+    "appeals_reviewer",
     "admin",
   ]);
   const s = await createClient();
   const { data } = await s
     .from("cbg_applications")
     .select("id,reference_number,status,parish,submitted_at,updated_at")
-    .in("status", ["verified", "assessment_ready", "human_review", "decision_pending"])
+    .in("status", [
+      "verified",
+      "assessment_ready",
+      "human_review",
+      "decision_pending",
+    ])
     .order("submitted_at");
   return (
     <>
       <h1 className="text-3xl font-bold">Secure assessment queue</h1>
       <p className="mt-2 text-slate-600">
-        Mandatory and QA cases wait for full reassessment. Routine AI-led cases remain available for discretionary reviewer selection.
+        Mandatory and QA cases wait for full reassessment. Routine AI-led cases
+        remain available for discretionary reviewer selection.
       </p>
       <Card className="mt-6 overflow-x-auto p-0">
         <table className="w-full text-left text-sm">
