@@ -48,6 +48,6 @@ export interface AssessmentResult {
   fairnessWarnings: string[];
   recommendedAction: string;
   reviewPathway: string;
-  requiresHumanReview: true;
+  requiresHumanReview: boolean;
   rulesVersion: string;
 }

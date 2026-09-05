@@ -3,7 +3,7 @@ import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Card, Input } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { runAssessment, submitHumanReview } from "../actions";
+import { requestDiscretionaryReview, runAssessment, submitHumanReview } from "../actions";
 const scores = [
   ["medicalUrgency", "Medical urgency", 30],
   ["financialHardship", "Financial hardship", 20],
@@ -36,7 +36,7 @@ export default async function CasePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ success?: string }>;
 }) {
-  await requireActor();
+  const actor=await requireActor();
   const { id } = await params;
   const { success } = await searchParams;
   const s = await createClient();
@@ -48,6 +48,9 @@ export default async function CasePage({
     .eq("id", id)
     .single(),s.from("cbg_ai_assessments").select("*,cbg_model_versions(version)").eq("application_id",id).order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle(),s.from("cbg_final_decisions").select("id,decision,decided_at").eq("application_id",id).maybeSingle()]);
   if (!c) notFound();
+  const {data:reviewRequest}=latest?await s.from("cbg_review_requests").select("id,review_type,status,rationale,requested_at").eq("ai_assessment_id",latest.id).in("status",["queued","in_review"]).maybeSingle():{data:null};
+  const canCompleteReview=actor.roles.some(role=>["case_review_committee","appeals_reviewer","admin"].includes(role));
+  const canRequestReview=actor.roles.some(role=>["case_review_committee","human_oversight_committee","admin"].includes(role));
   const medical = Array.isArray(c.cbg_medical_verifications)
     ? c.cbg_medical_verifications[0]
     : c.cbg_medical_verifications;
@@ -109,15 +112,9 @@ export default async function CasePage({
                 </p>
               </div>
             </div>
-            <div
-              role="alert"
-              className="mt-5 rounded-lg bg-amber-50 p-4 text-sm text-amber-900"
-            >
-              This recommendation is advisory. A qualified human review is
-              required before any final decision.
-            </div>
+            <div role="status" className={`mt-5 rounded-lg p-4 text-sm ${reviewRequest?"bg-amber-50 text-amber-900":"bg-emerald-50 text-emerald-900"}`}>{reviewRequest?`${String(reviewRequest.review_type).replaceAll("_"," ")} full human reassessment required: ${reviewRequest.rationale}`:"No mandatory-review flags were detected. This case is on the AI-led routine pathway, but an authorized reviewer may still request a full reassessment."}</div>
           </Card>
-          {finalized ? <Card><h2 className="text-lg font-semibold">Review finalized</h2><p className="mt-2 text-sm text-slate-600">A final human decision has already been recorded{finalDecision?.decided_at?` on ${new Date(finalDecision.decided_at).toLocaleString("en-JM")}`:""}. Review controls are locked to prevent duplicate decisions.</p>{finalDecision?.decision?<p className="mt-3"><Badge tone="success">{finalDecision.decision}</Badge></p>:null}</Card> : <Card>
+          {finalized ? <Card><h2 className="text-lg font-semibold">Review finalized</h2><p className="mt-2 text-sm text-slate-600">A final human decision has already been recorded{finalDecision?.decided_at?` on ${new Date(finalDecision.decided_at).toLocaleString("en-JM")}`:""}. Review controls are locked to prevent duplicate decisions.</p>{finalDecision?.decision?<p className="mt-3"><Badge tone="success">{finalDecision.decision}</Badge></p>:null}</Card> : reviewRequest&&canCompleteReview ? <Card>
             <h2 className="text-lg font-semibold">
               Record qualified human review
             </h2>
@@ -227,7 +224,7 @@ export default async function CasePage({
                 Save human review and final decision
               </SubmitButton>
             </form>
-          </Card>}
+          </Card> : reviewRequest ? <Card><h2 className="text-lg font-semibold">Qualified review pending</h2><p className="mt-2 text-sm text-slate-600">This case is queued for a full reassessment by a Case Review Committee member, Appeals Reviewer, or Admin. Your current role may view the pathway but cannot record the review.</p></Card> : canRequestReview ? <Card><h2 className="text-lg font-semibold">Request discretionary review</h2><p className="mt-1 text-sm text-slate-600">Authorized reviewers may pull any routine case for a complete human reassessment. The request and rationale are recorded in the audit history.</p><form action={requestDiscretionaryReview} className="mt-4 grid gap-3"><input type="hidden" name="applicationId" value={c.id}/><input type="hidden" name="assessmentId" value={latest.id}/><textarea name="rationale" minLength={10} maxLength={2000} required placeholder="Reason for selecting this case for full reassessment" className="min-h-24 rounded-lg border p-3"/><SubmitButton pendingLabel="Requesting review…">Request full human reassessment</SubmitButton></form></Card> : null}
         </div>
       ) : (
         <Card className="mt-6">
@@ -282,7 +279,7 @@ export default async function CasePage({
               </div>
             </fieldset>
             <SubmitButton pendingLabel="Running assessment…">
-              Create assessment and route to human review
+              Run AI assessment and determine pathway
             </SubmitButton>
           </form>
         </Card>

@@ -15,14 +15,13 @@ export default async function Queue() {
   const { data } = await s
     .from("cbg_applications")
     .select("id,reference_number,status,parish,submitted_at,updated_at")
-    .in("status", ["verified", "assessment_ready", "human_review"])
+    .in("status", ["verified", "assessment_ready", "human_review", "decision_pending"])
     .order("submitted_at");
   return (
     <>
       <h1 className="text-3xl font-bold">Secure assessment queue</h1>
       <p className="mt-2 text-slate-600">
-        Identifiable details are available only inside authorized case
-        workspaces.
+        Mandatory and QA cases wait for full reassessment. Routine AI-led cases remain available for discretionary reviewer selection.
       </p>
       <Card className="mt-6 overflow-x-auto p-0">
         <table className="w-full text-left text-sm">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assessApplication, canCreateFinalDecision } from "./assessment";
+import { assessApplication, canCreateFinalDecision, determineReviewRoute } from "./assessment";
 import type { AssessmentInput } from "@/types/database";
 const base: AssessmentInput = {
   medicalUrgency: 20,
@@ -29,7 +29,7 @@ describe("transparent assessment", () => {
     const result = assessApplication(base);
     expect(result.score).toBe(63);
     expect(result.category).toBe("high");
-    expect(result.requiresHumanReview).toBe(true);
+    expect(result.requiresHumanReview).toBe(false);
   });
   it("routes missing documents for follow-up without rejection", () => {
     const result = assessApplication({ ...base, missingDocuments: true });
@@ -56,4 +56,7 @@ describe("transparent assessment", () => {
   it("rejects out-of-range component scores", () => {
     expect(() => assessApplication({ ...base, medicalUrgency: 31 })).toThrow();
   });
+  it("keeps routine high-confidence cases on the AI-led pathway",()=>{const result=assessApplication(base);expect(determineReviewRoute(result,"routine-case",0).type).toBe("routine")});
+  it("mandates full reassessment when a safeguard is present",()=>{const result=assessApplication({...base,missingDocuments:true});expect(determineReviewRoute(result,"case-1").type).toBe("mandatory")});
+  it("supports deterministic quality-assurance sampling",()=>{const result=assessApplication(base);expect(determineReviewRoute(result,"case-2",100).type).toBe("quality_assurance")});
 });

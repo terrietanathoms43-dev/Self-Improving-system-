@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { assessApplication, assessmentInputSchema } from "@/lib/assessment";
+import { assessApplication, assessmentInputSchema, determineReviewRoute } from "@/lib/assessment";
 import { createOpenAIAdvisory } from "@/lib/openai/server";
 import { createAdminClient } from "@/lib/supabase/server";
 const formSchema = assessmentInputSchema.extend({ applicationId: z.uuid() });
@@ -57,10 +57,14 @@ export async function runAssessment(formData: FormData) {
   let advisoryMetadata:Record<string,unknown>={used:false};
   const trained=version.cbg_trained_models as unknown as {provider_model_id:string;status:string}|null;
   if(version.model_type==="rules_with_advisory"&&trained?.status==="eligible"){
-    try{const generated=await createOpenAIAdvisory(trained.provider_model_id,input,deterministic);result={...deterministic,...generated.advisory,score:deterministic.score,category:deterministic.category,requiresHumanReview:true,rulesVersion:deterministic.rulesVersion};advisoryMetadata={used:true,trainedModelId:version.trained_model_id};await createAdminClient().from("cbg_openai_usage").insert({operation:"assessment_advisory",model:trained.provider_model_id,model_version_id:version.id,prompt_tokens:generated.usage?.prompt_tokens??null,completion_tokens:generated.usage?.completion_tokens??null,total_tokens:generated.usage?.total_tokens??null,succeeded:true});}
+    try{const generated=await createOpenAIAdvisory(trained.provider_model_id,input,deterministic);result={...deterministic,...generated.advisory,score:deterministic.score,category:deterministic.category,requiresHumanReview:deterministic.requiresHumanReview,rulesVersion:deterministic.rulesVersion};advisoryMetadata={used:true,trainedModelId:version.trained_model_id};await createAdminClient().from("cbg_openai_usage").insert({operation:"assessment_advisory",model:trained.provider_model_id,model_version_id:version.id,prompt_tokens:generated.usage?.prompt_tokens??null,completion_tokens:generated.usage?.completion_tokens??null,total_tokens:generated.usage?.total_tokens??null,succeeded:true});}
     catch{const eventId=crypto.randomUUID();console.error(JSON.stringify({level:"error",eventId,operation:"openai_assessment_advisory",code:"ADVISORY_FALLBACK"}));const admin=createAdminClient();await Promise.all([admin.from("cbg_error_events").insert({event_id:eventId,route:"/dashboard/queue/[id]",operation:"openai_assessment_advisory",error_code:"ADVISORY_FALLBACK",safe_message:"The governed advisory model was unavailable; deterministic rules were used.",metadata:{model_version_id:version.id}}),admin.from("cbg_openai_usage").insert({operation:"assessment_advisory",model:trained.provider_model_id,model_version_id:version.id,succeeded:false})]);advisoryMetadata={used:false,fallback:true,eventId};}
   }
-  const { error } = await s.rpc("cbg_run_assessment_atomic", {
+  const route=determineReviewRoute(result,applicationId);
+  const authoritativePathway=route.requiresHumanReview
+    ? `${route.type === "quality_assurance" ? "Quality-assurance selection" : "Safeguard trigger"}: full qualified human reassessment required before any final decision.`
+    : deterministic.reviewPathway;
+  const { error } = await s.rpc("cbg_run_assessment_routed", {
     p_application_id: applicationId,
     p_model_version_id: version.id,
     p_score: result.score,
@@ -71,13 +75,18 @@ export async function runAssessment(formData: FormData) {
     p_missing_information: result.missingInformation,
     p_fairness_warnings: result.fairnessWarnings,
     p_recommended_action: result.recommendedAction,
-    p_review_pathway: result.reviewPathway,
+    p_review_pathway: authoritativePathway,
     p_input_snapshot: { ...input, advisory: advisoryMetadata },
+    p_review_type:route.type,
+    p_review_rationale:route.rationale,
   });
   if (error) throw error;
   revalidatePath("/dashboard/queue");
-  redirect(`/dashboard/queue/${applicationId}?success=Assessment+created+and+routed+to+human+review`);
+  redirect(`/dashboard/queue/${applicationId}?success=${route.requiresHumanReview?"Assessment+created+and+routed+for+full+human+reassessment":"Routine+assessment+completed.+Discretionary+human+review+remains+available"}`);
 }
+
+const discretionarySchema=z.object({applicationId:z.uuid(),assessmentId:z.uuid(),rationale:z.string().min(10).max(2000)});
+export async function requestDiscretionaryReview(formData:FormData){await requireActor(["case_review_committee","human_oversight_committee","admin"]);const parsed=discretionarySchema.safeParse(Object.fromEntries(formData));if(!parsed.success)throw new Error("Explain why this case should receive discretionary review");const s=await createClient();const {error}=await s.rpc("cbg_request_discretionary_review",{p_application_id:parsed.data.applicationId,p_assessment_id:parsed.data.assessmentId,p_rationale:parsed.data.rationale});if(error)throw error;revalidatePath(`/dashboard/queue/${parsed.data.applicationId}`);redirect(`/dashboard/queue/${parsed.data.applicationId}?success=Discretionary+full+human+reassessment+requested`)}
 
 const reviewSchema = z.object({
   applicationId: z.uuid(),

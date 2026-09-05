@@ -104,15 +104,24 @@ export function assessApplication(
     fairnessWarnings,
     recommendedAction: i.missingDocuments
       ? "Request missing information and retain in human-review queue"
-      : score >= 60
-        ? "Prioritize for committee review"
-        : "Continue to qualified human review",
+      : mandatory
+        ? "Route for qualified human reassessment"
+        : score >= 60
+          ? "Advance through the priority decision pathway"
+          : "Advance through the routine decision pathway",
     reviewPathway: mandatory
       ? "Mandatory qualified human review"
-      : "Standard case review committee",
-    requiresHumanReview: true,
+      : "AI-led routine pathway; discretionary review remains available",
+    requiresHumanReview: mandatory,
     rulesVersion,
   };
+}
+export type ReviewRoute={type:"mandatory"|"quality_assurance"|"routine";rationale:string;requiresHumanReview:boolean};
+export function determineReviewRoute(result:AssessmentResult,applicationId:string,qaPercent=10):ReviewRoute{
+  if(result.requiresHumanReview)return {type:"mandatory",rationale:result.riskFactors[0]??result.missingInformation[0]??result.fairnessWarnings[0]??"Assessment safeguards require qualified human reassessment.",requiresHumanReview:true};
+  const bucket=[...applicationId].reduce((sum,char)=>sum+char.charCodeAt(0),0)%100;
+  if(bucket<qaPercent)return {type:"quality_assurance",rationale:"Selected by the documented quality-assurance sampling rule.",requiresHumanReview:true};
+  return {type:"routine",rationale:"High-confidence routine assessment with no mandatory-review safeguard flags.",requiresHumanReview:false};
 }
 export function canCreateFinalDecision(
   source: "human" | "ai",
