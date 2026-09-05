@@ -17,4 +17,5 @@ describe("training dataset privacy", () => {
     const a = buildTrainingJsonl([source]); const b = buildTrainingJsonl([source]);
     expect(a).toEqual(b); expect(a.count).toBe(1); expect(a.content.endsWith("\n")).toBe(true);
   });
+  it("preserves the actual review route instead of labelling every case mandatory",()=>{const routine={...source,assessment:{...source.assessment,requires_human_review:false,input_snapshot:null},correction:null};const example=deidentifiedExample(routine);const userMessage=JSON.parse(example.messages[1].content);const assistantMessage=JSON.parse(example.messages[2].content);expect(userMessage.priorAssessment.requiresHumanReview).toBe(false);expect(assistantMessage.requiresHumanReview).toBe(false);expect(assistantMessage.correctionCategory).toBe("ai_correct")});
 });

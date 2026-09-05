@@ -14,9 +14,9 @@ export function deidentifiedExample(source: TrainingSource) {
   const factors = Object.fromEntries(allowedInputKeys.map((key) => [key, raw[key] ?? null]));
   return {
     messages: [
-      { role: "system", content: "You are a decision-support quality model. Do not diagnose, reject, or make final sensitive decisions. Identify a recommendation and mandatory human-review pathway from de-identified structured factors." },
-      { role: "user", content: JSON.stringify({ factors, priorAssessment: { score: source.assessment.score, category: source.assessment.category, confidence: source.assessment.confidence, requiresHumanReview: true } }) },
-      { role: "assistant", content: JSON.stringify({ humanCategory: source.review.final_category, humanDecision: source.review.proposed_decision, disposition: source.review.disposition, correctionCategory: source.correction?.category ?? "ai_correct", biasConcern: source.correction?.bias_concern ?? false, policyGap: source.correction?.policy_gap ?? false, requiresHumanReview: true }) },
+      { role: "system", content: "You are a decision-support quality model. Do not diagnose, reject, or make final sensitive decisions. Identify a recommendation and the appropriate review pathway from de-identified structured factors." },
+      { role: "user", content: JSON.stringify({ factors, priorAssessment: { score: source.assessment.score, category: source.assessment.category, confidence: source.assessment.confidence, requiresHumanReview: source.assessment.requires_human_review } }) },
+      { role: "assistant", content: JSON.stringify({ humanCategory: source.review.final_category, humanDecision: source.review.proposed_decision, disposition: source.review.disposition, correctionCategory: source.correction?.category ?? "ai_correct", biasConcern: source.correction?.bias_concern ?? false, policyGap: source.correction?.policy_gap ?? false, requiresHumanReview: source.assessment.requires_human_review }) },
     ],
   };
 }
