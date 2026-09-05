@@ -25,6 +25,10 @@ Production-oriented Next.js application for human-governed medical-assistance as
 
 Never expose `SUPABASE_SECRET_KEY` or `OPENAI_API_KEY` to browser code. Only variables prefixed with `NEXT_PUBLIC_` are client-visible. OpenAI is a required server-side dependency for the governed training workflow. It is never used to diagnose, issue final sensitive decisions, or silently modify or activate production rules.
 
+### Temporary colleague testing
+
+Set `CAREBRIDGE_OPEN_STAFF_SIGNUP=true` only while the workspace contains test data. Colleagues can then register with a full name, regular email address, and password. Supabase must confirm the email before the callback creates temporary testing access. Set the value back to `false` and redeploy before processing live applications, then review and reduce every testing account's roles from Staff administration.
+
 ### Controlled OpenAI training
 
 The OpenAI training workspace creates immutable JSONL datasets from completed human reviews. It uses an explicit allow-list of numeric assessment factors, safeguard flags, and verified outcomes; names, contact details, application identifiers, uploaded documents, medical narratives, and reviewer evidence are excluded. The workflow requires:
