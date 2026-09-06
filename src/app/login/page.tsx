@@ -86,7 +86,7 @@ export default async function Login({
               </div>
             ) : null}
 
-            <Card className="p-6 shadow-xl shadow-slate-200/60 sm:p-8">
+            <Card className="p-6 text-slate-900 shadow-xl shadow-slate-200/60 dark:text-slate-100 sm:p-8">
               <div className="flex items-start gap-4">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
                   <LockKeyhole className="h-5 w-5" aria-hidden="true" />
@@ -133,7 +133,7 @@ export default async function Login({
             </Card>
 
             {registrationOpen ? (
-              <Card className="mt-6 p-6 sm:p-8">
+              <Card className="mt-6 p-6 text-slate-900 dark:text-slate-100 sm:p-8">
                 <p className="text-sm font-semibold text-blue-700">
                   New testing staff
                 </p>
@@ -150,6 +150,7 @@ export default async function Login({
                     <Input
                       name="fullName"
                       autoComplete="name"
+                      placeholder="Enter your full name"
                       minLength={2}
                       maxLength={120}
                       required
@@ -169,6 +170,7 @@ export default async function Login({
                       name="password"
                       type="password"
                       autoComplete="new-password"
+                      placeholder="Create a password"
                       minLength={12}
                       required
                     />
@@ -178,6 +180,7 @@ export default async function Login({
                       name="confirmPassword"
                       type="password"
                       autoComplete="new-password"
+                      placeholder="Re-enter your password"
                       minLength={12}
                       required
                     />
@@ -210,7 +213,9 @@ function Field({
 }) {
   return (
     <label className={`block text-sm font-medium ${className}`}>
-      <span className="mb-1.5 block">{label}</span>
+      <span className="mb-1.5 block text-slate-700 dark:text-slate-200">
+        {label}
+      </span>
       {children}
     </label>
   );
