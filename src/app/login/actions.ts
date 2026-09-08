@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/security";
+import { resolveAppUrl } from "@/lib/app-url";
 export async function login(formData: FormData) {
   try {
     await enforceRateLimit("staff_login", 8, 900);
@@ -66,7 +67,7 @@ export async function registerTestingStaff(formData: FormData) {
       "/login?error=Enter+your+full+name,+a+valid+email,+and+matching+12-character+passwords",
     );
   const supabase = await createClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const appUrl = resolveAppUrl();
   if (!appUrl) redirect("/login?error=Registration+is+not+configured");
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
